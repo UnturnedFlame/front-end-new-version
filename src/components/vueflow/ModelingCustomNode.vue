@@ -123,9 +123,12 @@ function getIconClassByAction(action) {
 function updateNodeDataByAction(id, action) {
   emit('showResults', props,action)
 }
-
+// 判断是否显示icon
 function shouldShowIcon(props, action){
+  console.log("shouldShowIcon props.data: ", props.data)
   if(props.data.laglabel === '数据源'){
+    return false
+  }else if(props.data.label=='z-score标准化'){
     return false
   }else if(props.data.laglabel === '特征选择' && (action === '特征选择结果' | action === '相关系数矩阵热力图')){
     return true
@@ -138,11 +141,14 @@ function shouldShowIcon(props, action){
   }else if((props.data.laglabel == '层次分析模糊综合评估' || props.data.laglabel == '层次朴素贝叶斯评估' || props.data.laglabel == '层次逻辑回归评估') && (action === '总结论' | action==='详情')) {
     return true
   }else if(props.data.laglabel == '故障诊断' && (action === '连续样本指标变换' | action==='不同类型样本占比' | action==='原始信号波形图')) {
-    if (props.id.includes('deeplearning') && action === '连续样本指标变换')
+    if (props.id.includes('deeplearning') && action === '连续样本指标变换'){
+      
       return false
+    }
     else 
       return true
   }
+
 }
 
 // 防止输入框点击时触发父级的双击事件
@@ -210,13 +216,14 @@ function delete_button(id){
           </template>
           <button
               v-if="shouldShowIcon(props, action)"
+
               type="button"
               :class="{ selected: action === data.action }"
               @click="updateNodeDataByAction(props.id, action, props)"
               style="border: 0;padding: 0;background: white;margin: 5px;"
           >
             <!-- <i style="font-size: 30px;" v-if="shouldShowIcon(props, action)" :class="getIconClassByAction(action)"></i> -->
-            <img style="height: 30px; width: 30px;" :src="getIconClassByAction(action)" alt="none"/>
+            <img v-if="!(props.data.label=='z-score标准化')" style="height: 30px; width: 30px;" :src="getIconClassByAction(action)" alt="none"/>
           </button>
         </el-tooltip>
       </div>

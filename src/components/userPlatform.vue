@@ -32,9 +32,9 @@
         <!-- 右侧的用户操作区 -->
         <div class="user-actions">
           <!-- 欢迎信息 -->
-          <span class="welcome-message">{{
-              username === '用户名未设置' ? '用户名未设置' : ('欢迎' + username + '！')
-            }}</span>
+          <span class="welcome-message">{{ username === '用户名未设置' ? '用户名未设置' : ('欢迎' + username + '！') }}
+              
+            </span>
 
 <!--          &lt;!&ndash; 帮助 &ndash;&gt;-->
 <!--          <div class="clickable action-item">-->
@@ -6783,14 +6783,19 @@ suggestions.forEach((element: string, index: number) => {
 
 // 最终评估结果
 finalSuggestion.value = results_object.最终评估结果
-resultsToGenerateConclusion['healthEvaluation']['text'] = finalSuggestion.value
+// resultsToGenerateConclusion['healthEvaluation']['texts'].push(finalSuggestion.value)
 let statusOfAllExamples: Object = results_object.各样本状态隶属度
+
+// 清空该模块结果
+// resultsToGenerateConclusion['healthEvaluation']['imageBase64List'] = []
+// resultsToGenerateConclusion['healthEvaluation']['texts'] = []
 
 nextTick(() => {
   // 绘制故障样本与非故障样本数量饼状图
-  var pieChartDom = document.getElementById('healthEvaluationPieChart');
+  let pieChartDom = document.getElementById('healthEvaluationPieChart');
   let existingChart = echarts.getInstanceByDom(pieChartDom);
 
+  let imgSrc
   if(!existingChart){
 
     var pieChart = echarts.init(pieChartDom);
@@ -6837,7 +6842,7 @@ nextTick(() => {
     pieChart.setOption(pieChartOption);
 
     // 将echart以Base64图像编码的形式存放到resultPicturesToGenerateConclusion中
-    var imgSrc = pieChart.getDataURL({
+    imgSrc = pieChart.getDataURL({
         type: 'png',  // 可选 'jpeg'
         backgroundColor: '#fff',
         excludeComponents: ['toolbox']
@@ -6846,9 +6851,18 @@ nextTick(() => {
     imgSrc = imgSrc.replace(/^data:image\/[a-z]+;base64,/, "");
 
     // 向最终报告添加健康评估的结果
-    resultsToGenerateConclusion['healthEvaluation']['imageBase64'] = imgSrc
-    resultsToGenerateConclusion['healthEvaluation']['text'] = finalSuggestion.value
+  }else{
+    // 将echart以Base64图像编码的形式存放到resultPicturesToGenerateConclusion中
+    imgSrc = existingChart.getDataURL({
+        type: 'png',  // 可选 'jpeg'
+        backgroundColor: '#fff',
+        excludeComponents: ['toolbox']
+    });
+    // 去除图片Base64编码前缀
+    imgSrc = imgSrc.replace(/^data:image\/[a-z]+;base64,/, "");
   }
+  resultsToGenerateConclusion['healthEvaluation']['imageBase64List'].push(imgSrc) 
+  resultsToGenerateConclusion['healthEvaluation']['texts'].push(finalSuggestion.value)
 
 })
 // healthEvaluation.value = results_object.评估建议
@@ -6957,7 +6971,7 @@ nextTick(() => {
     type EChartsOption = echarts.EChartsOption;
     let domElement = document.getElementById(object.sensor_no + 'features');
     let existingChart = echarts.getInstanceByDom(domElement);
-
+    let imgSrc
     if (!existingChart){
       let dataSeries = object.data
       var lineChart = echarts.init(domElement);
@@ -7013,22 +7027,28 @@ nextTick(() => {
         })
       }
       lineChart.setOption(lineChartOption)
-      var imgSrc = lineChart.getDataURL({
+      imgSrc = lineChart.getDataURL({
         type: 'jpeg',  // 可选 'jpeg'
         backgroundColor: '#fff',
         excludeComponents: ['toolbox']
       });
       // 提取 Base64 编码部分
-      var base64Image = imgSrc.split(',')[1];
+
       // console.log(" feature extraction base64Image: ", base64Image)
       // 将imgsrc编码为字符串
-      resultsToGenerateConclusion['featureExtraction']['imageBase64'] = base64Image
+    }else{
+      imgSrc = existingChart.getDataURL({
+        type: 'jpeg',  // 可选 'jpeg'
+        backgroundColor: '#fff',
+        excludeComponents: ['toolbox']
+      });
     }
+    let base64Image = imgSrc.split(',')[1];
+    resultsToGenerateConclusion['featureExtraction']['imageBase64List'].push(base64Image) 
   })
-  resultsToGenerateConclusion['featureExtraction']['text'] = '对输入信号特征提取结果如下'
+  resultsToGenerateConclusion['featureExtraction']['texts'].push("对输入的"+ featuresSeriesList.value.length+"个传感器信号进行特征提取"+"， 每段信号共提取出" + featuresName.length + "个特征。");
 })
 }
-
 
 
 
@@ -7073,105 +7093,114 @@ const featuresSelectionDisplay = (resultsObject: any) => {
   correlationFigure.value = 'data:image/png;base64,' + figure2
 
   // resultsToGenerateConclusion['featureSelection']['imageBase64'] = figure1
-  resultsToGenerateConclusion['featureSelection']['text'] = '对输入信号进行特征选择后，最终选择的特征为' + featuresSelected.value
+  resultsToGenerateConclusion['featureSelection']['texts'].push('对输入信号提取到的特征进行特征选择后，最终选择的特征为' + featuresSelected.value)
   // 将 Base64 字符串转换为二进制数组
   // const binaryData = base64ToArrayBuffer(figure1);
   nextTick(() => {
     const chartDom = document.getElementById('featureSelectionChart');
     if (!chartDom) return;
-    const myChart = echarts.init(chartDom);
+    let existingChart = echarts.getInstanceByDom(chartDom);
+    let imgSrc: string
+    if(!existingChart){
+      const myChart = echarts.init(chartDom);
 
-    const allFeatures = resultsObject.all_features;
-    const computedValues = resultsObject.computed_values;
-    const selectedFeatures = new Set(resultsObject.selected_features);
+      const allFeatures = resultsObject.all_features;
+      const computedValues = resultsObject.computed_values;
+      const selectedFeatures = new Set(resultsObject.selected_features);
 
-    const seriesData = allFeatures.map((feature, index) => ({
-      name: feature,
-      value: computedValues[index],
-      itemStyle: {
-        color: selectedFeatures.has(feature) ? 'red' : 'blue'
-      }
-    }));
-
-    const option = {
-      title: {
-        text: '特征相关系数柱状图'
-      },
-      animation: false,
-      tooltip: {},
-      xAxis: {
-        data: allFeatures,
-        axisLabel: {
-          interval: 0,
-          rotate: 45,
-          margin: 10
+      const seriesData = allFeatures.map((feature, index) => ({
+        name: feature,
+        value: computedValues[index],
+        itemStyle: {
+          color: selectedFeatures.has(feature) ? 'red' : 'blue'
         }
-      },
-      yAxis: {},
-      series: [{
-        name: '相关系数',
-        type: 'bar',
-        data: seriesData,
-        markLine: {
-          symbol: ['none', 'none'], // 去掉箭头
-          label: {
-            show: false,
-            position: 'start',
-            formatter: '{b}'
-          },
-          data: [
-            {
-              name: '阈值',
-              yAxis: thresholdValue
-            }
-          ],
-          label: '阈值',
-          lineStyle: {
-            color: '#f00',
-            // width: 3 // 设置线的宽度，可以根据需要调整数值
+      }));
+
+      const option = {
+        title: {
+          text: '特征相关系数柱状图'
+        },
+        animation: false,
+        tooltip: {},
+        xAxis: {
+          data: allFeatures,
+          axisLabel: {
+            interval: 0,
+            rotate: 45,
+            margin: 10
           }
-        } 
-      }],
-      
-    };
+        },
+        yAxis: {},
+        series: [{
+          name: '相关系数',
+          type: 'bar',
+          data: seriesData,
+          markLine: {
+            symbol: ['none', 'none'], // 去掉箭头
+            label: {
+              show: false,
+              position: 'start',
+              formatter: '{b}'
+            },
+            data: [
+              {
+                name: '阈值',
+                yAxis: thresholdValue
+              }
+            ],
+            label: '阈值',
+            lineStyle: {
+              color: '#f00',
+              // width: 3 // 设置线的宽度，可以根据需要调整数值
+            }
+          } 
+        }],
+        
+      };
 
-    if (rule=='rule2'){
-      option.series[0].markLine = null
-      // 在图表右上角添加一个表示阈值的标签
-      option.graphic = [
-        {
-          type: 'text',
-          left: 'right',
-          top: 'top',
-          style: {
-            text: `特征系数总和达到阈值: ${thresholdValue}`,
-            textAlign: 'right',
-            fill: '#f00', // 文字颜色
-            fontSize: 17 // 字体大小
-          },
-          offset: [-20, 20]
-        }
-      ];
-    }
+      if (rule=='rule2'){
+        option.series[0].markLine = null
+        // 在图表右上角添加一个表示阈值的标签
+        option.graphic = [
+          {
+            type: 'text',
+            left: 'right',
+            top: 'top',
+            style: {
+              text: `特征系数总和达到阈值: ${thresholdValue}`,
+              textAlign: 'right',
+              fill: '#f00', // 文字颜色
+              fontSize: 17 // 字体大小
+            },
+            offset: [-20, 20]
+          }
+        ];
+      }
 
-    // if (rule=='rule1'){
-    //   option.series[0].markLine.data[0].yAxis = thresholdValue
-    // }else{
+      // if (rule=='rule1'){
+      //   option.series[0].markLine.data[0].yAxis = thresholdValue
+      // }else{
 
-    // }
-
-    myChart.setOption(option);
-
-    var imgSrc = myChart.getDataURL({
-      type: 'jpeg',  // 可选 'jpeg'
-      backgroundColor: '#fff',
-      excludeComponents: ['toolbox']
-    });
+      // }
+      myChart.setOption(option);
+      imgSrc = myChart.getDataURL({
+        type: 'jpeg',  // 可选 'jpeg'
+        backgroundColor: '#fff',
+        excludeComponents: ['toolbox']
+      });
+    }else{
+      imgSrc = existingChart.getDataURL({
+        type: 'jpeg',  // 可选 'jpeg'
+        backgroundColor: '#fff',
+        excludeComponents: ['toolbox']
+      });
+    } 
+    
     // 提取 Base64 编码部分
-    var base64Image = imgSrc.split(',')[1];
+    let base64Image = imgSrc.split(',')[1];
     // console.log(" feature extraction base64Image: ", base64Image)
     // 将imgsrc编码为字符串
-    resultsToGenerateConclusion['featureSelection']['imageBase64'] = base64Image
+    resultsToGenerateConclusion['featureSelection']['imageBase64List'].push(base64Image)
   })
 }
 
@@ -7244,156 +7273,6 @@ const faultDiagnosisResultsText = ref('')
 const faultDiagnosisResultOption = ref('2')
 const featuresStatisticsTableData = ref([])
 
-// const faultDiagnosisDisplay = (resultsObject: any) => {
-//   displayFaultDiagnosis.value = true
-
-//   let figure1 = resultsObject.figure_Base64
-//   let diagnosisResult = resultsObject.diagnosis_result
-//   let indicator = resultsObject.indicator
-//   let x_axis = resultsObject.x_axis
-//   let num_has_fault = resultsObject.num_has_fault
-//   let num_has_no_fault = resultsObject.num_has_no_fault
-
-//   console.log('indicator: ', indicator)
-//   // 获取indicator的key
-//   let indicatorKeys = Object.keys(indicator)
-
-//   nextTick(() => {
-
-//     // 绘制连续样本指标变化折线图
-//     type EChartsOption = echarts.EChartsOption;
-//     var lineChartDom = document.getElementById('indicatorVaryingFigure')!;
-//     var lineChart = echarts.init(lineChartDom);
-//     var lineChartOption: EChartsOption;
-
-//     lineChartOption = {
-//       title: {
-//         text: '连续样本指标变化曲线图'
-//       },
-//       tooltip: {
-//         trigger: 'axis'
-//       },
-//       legend: {
-//         // data: ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
-//         left: 'center',
-//         top: '5%',
-//         bottom: '6%',
-//         data: indicatorKeys
-//       },
-//       grid: {
-//         left: '5%',
-//         right: '5%',
-//         bottom: '3%',
-//         containLabel: true
-//       },
-//       toolbox: {
-//         feature: {
-//           saveAsImage: {}
-//         }
-//       },
-//       xAxis: {
-//         type: 'category',
-//         boundaryGap: false,
-//         // data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-//         data: x_axis
-//       },
-//       yAxis: {
-//         type: 'value'
-//       },
-//       series: [],
-//       dataZoom: [
-//         {
-//           type: 'inside', // 使用鼠标滚轮来缩放
-//           start: 0,
-//           end: 100,
-//         },/*
-//         {
-//           show: true,
-//           type: 'slider', // 在图表下方显示滑动条
-//           start: 0,
-//           end: 100,
-//         },*/
-//       ],
-//     };
-
-//     for (let key in indicator) {
-//       lineChartOption.series.push({
-//         name: key,
-//         type: 'line',
-//         stack: 'Total',
-//         data: indicator[key]
-//       })
-//     }
-//     lineChart.setOption(lineChartOption);
-
-//     // 绘制故障样本与非故障样本数量饼状图
-//     var pieChartDom = document.getElementById('faultExampleRatioFigure');
-//     var pieChart = echarts.init(pieChartDom);
-//     var pieChartOption;
-
-//     pieChartOption = {
-//       title: {
-//         text: '预测结果中不同类型样本数量比例',
-//         // subtext: 'Fake Data',
-//         left: 'center'
-//       },
-//       tooltip: {
-//         trigger: 'item'
-//       },
-//       legend: {
-//         orient: 'vertical',
-//         left: 'left'
-//       },
-//       series: [
-//         {
-//           name: '样本数量',
-//           type: 'pie',
-//           radius: '50%',
-//           data: [
-//             {value: num_has_fault, name: '预测为故障类型的样本'},
-//             {value: num_has_no_fault, name: '预测为非故障类型的样本'},
-//             // { value: 580, name: 'Email' },
-//             // { value: 484, name: 'Union Ads' },
-//             // { value: 300, name: 'Video Ads' }
-//           ],
-//           emphasis: {
-//             itemStyle: {
-//               shadowBlur: 10,
-//               shadowOffsetX: 0,
-//               shadowColor: 'rgba(0, 0, 0, 0.5)'
-//             }
-//           }
-//         }
-//       ],
-//       dataZoom: [
-//         {
-//           type: 'inside', // 使用鼠标滚轮来缩放
-//           start: 0,
-//           end: 100,
-//         },/*
-//         {
-//           show: true,
-//           type: 'slider', // 在图表下方显示滑动条
-//           start: 0,
-//           end: 100,
-//         },*/
-//       ],
-//     };
-
-//     pieChart.setOption(pieChartOption);
-//   })
-
-
-//   faultDiagnosisResultsText.value = resultsObject.resultText
-//   if (diagnosisResult == 0) {
-//     faultDiagnosis.value = '无故障'
-//   } else {
-//     faultDiagnosis.value = '存在故障'
-//   }
-//   faultDiagnosisFigure.value = 'data:image/png;base64,' + figure1
-
-// }
-
 // 获取随机颜色
 const generateColor = () => {
   let color = "";
@@ -7438,6 +7317,7 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
 
       let lineChartDom = document.getElementById('indicatorVaryingFigure')
       let existingLineChart = echarts.getInstanceByDom(lineChartDom);
+      let imgSrc: string;
 
       if(!existingLineChart){
         var lineChart = echarts.init(lineChartDom);
@@ -7514,6 +7394,7 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
       return 
     }
     let existingPieChart = echarts.getInstanceByDom(pieChartDom);
+    let imgSrc: string;
 
     if (!existingPieChart) {
       var pieChart = echarts.init(pieChartDom);
@@ -7556,15 +7437,20 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
         animation: false
       };
       pieChart.setOption(pieChartOption);
-      var imgSrc = pieChart.getDataURL({
+      imgSrc = pieChart.getDataURL({
         type: 'png',  // 可选 'jpeg'
         backgroundColor: '#fff',
         excludeComponents: ['toolbox']
       })
-      var img = imgSrc.split(',')[1]
-      resultsToGenerateConclusion['faultDiagnosis']['imageBase64'] = img
+    }else{
+      imgSrc = existingPieChart.getDataURL({
+        type: 'png',  // 可选 'jpeg'
+        backgroundColor: '#fff',
+        excludeComponents: ['toolbox']
+      })
     }
-    
+    let img = imgSrc.split(',')[1]
+    resultsToGenerateConclusion['faultDiagnosis']['imageBase64List'].push(img)
   })
 
 
@@ -7580,12 +7466,12 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
   // 向报告中添加故障诊断结果
   if (diagnosisResult == 0) {
     faultDiagnosis.value = '无故障'
-    resultsToGenerateConclusion['faultDiagnosis']['text'] = '由输入的振动信号，共截取到'+(num_has_fault+num_has_no_fault)+
-    '个样本，根据故障诊断模型预测，其中'+num_has_fault+'个样本存在故障，未达到样本总数的70%，由此判断该部件无故障'
+    resultsToGenerateConclusion['faultDiagnosis']['texts'].push('由输入的振动信号，共截取到'+(num_has_fault+num_has_no_fault)+
+    '个样本，根据故障诊断模型预测，其中'+num_has_fault+'个样本存在故障，未达到样本总数的70%，由此判断该部件无故障')
   } else {
     faultDiagnosis.value = '存在故障'
-    resultsToGenerateConclusion['faultDiagnosis']['text'] = '由输入的振动信号，共截取到'+(num_has_fault+num_has_no_fault)+
-    '个样本，根据故障诊断模型预测，其中'+num_has_fault+'个样本存在故障，已达到样本总数的70%，由此判断该部件存在故障'
+    resultsToGenerateConclusion['faultDiagnosis']['texts'].push('由输入的振动信号，共截取到'+(num_has_fault+num_has_no_fault)+
+    '个样本，根据故障诊断模型预测，其中'+num_has_fault+'个样本存在故障，已达到样本总数的70%，由此判断该部件存在故障')
   }
   faultDiagnosisFigure.value = 'data:image/png;base64,' + figure1
 
@@ -7641,7 +7527,7 @@ const faultRegressionDisplay = (resultsObject: any) => {
     predictionConclusion += ', ' + '经算法预测'+ resultsObject.time_to_fault_str + '后该部件可能出现故障' 
   }
 
-  resultsToGenerateConclusion['faultPrediction']['text'] = predictionConclusion
+  resultsToGenerateConclusion['faultPrediction']['texts'].push(predictionConclusion)
 }
 
 
@@ -7681,12 +7567,15 @@ const interpolationDisplay = (resultsObject: any) => {
   for (const [key, value] of Object.entries(resultsObject)) {
     sensorId += 1
     interpolationFigures.value.push('data:image/png;base64,' + value)
-    if (!resultsToGenerateConclusion['interpolation']['imageBase64']){
-      resultsToGenerateConclusion['interpolation']['imageBase64'] = value
-      resultsToGenerateConclusion['interpolation']['text'] = '插值处理结果'
-    }
+    // if (resultsToGenerateConclusion['interpolation']['imageBase64List'].length < Object.keys(resultsObject).length){
+    //   resultsToGenerateConclusion['interpolation']['imageBase64List'].push(value)
+    // }
+    resultsToGenerateConclusion['interpolation']['imageBase64List'].push(value)
+
     interpolationResultsOfSensors.value.push({label: key.split('_')[0], name: sensorId.toString()})
   }
+  resultsToGenerateConclusion['interpolation']['texts'].push(`对输入的${sensorId}个传感器信号进行插值处理，处理结果如下`)
+  
   // console.log('interpolationResultsOfSensors: ', interpolationResultsOfSensors)
   // console.log('interpolationFigures: ', interpolationFigures)
   // displayDenoise.value = true
@@ -7713,12 +7602,12 @@ const anomalyDetectionDisplay = (resultsObject: any) => {
     }
     sensorId += 1
     AnomalyDetectionFigures.value.push('data:image/png;base64,' + value)
-    if (!resultsToGenerateConclusion['anamolyDetection']['imageBase64']){
-      resultsToGenerateConclusion['anamolyDetection']['imageBase64'] = value
-      resultsToGenerateConclusion['anamolyDetection']['text'] = '异常值检测结果'
+    if (resultsToGenerateConclusion['anamolyDetection']['imageBase64List'] < 1){
+      resultsToGenerateConclusion['anamolyDetection']['imageBase64List'].push(value)
     }
     AnomalyDetectionResultsOfSensors.value.push({label: key.split('_')[0], name: sensorId.toString()})
   }
+  resultsToGenerateConclusion['anamolyDetection']['texts'].push(`对输入的${sensorId}个传感器信号进行异常值检测，检测结果如下`)
 }
 
 
@@ -7784,12 +7673,12 @@ const normalizationDisplay = (resultsObject: any) => {
       }
       sensorId += 1
       normalizationResultFigures.value.push('data:image/png;base64,' + value)
-      if (resultsToGenerateConclusion['normalization']['imageBase64']){
-        resultsToGenerateCxonclusion['normalization']['imageBase64'] = value
-        resultsToGenerateConclusion['normalization']['text'] = '无量纲化结果'
+      if (resultsToGenerateConclusion['normalization']['imageBase64List'] < 1){
+        resultsToGenerateCxonclusion['normalization']['imageBase64List'].push(value)
       }
       normalizationResultsSensors.value.push({label: key.split('_')[0], name: sensorId.toString()})
     }
+    resultsToGenerateConclusion['normalization']['texts'].push(`对输入的${sensorId}个传感器信号进行无量纲化结果，处理结果如下`)
   }
 }
 
@@ -7833,12 +7722,12 @@ const denoiseDisplay = (resultsObject: any) => {
   for (const [key, value] of Object.entries(resultsObject)) {
     sensorId += 1
     denoiseFigures.value.push('data:image/png;base64,' + value)
-    if (!resultsToGenerateConclusion['wavelet']['imageBase64']){
-      resultsToGenerateConclusion['wavelet']['imageBase64'] = value
-      resultsToGenerateConclusion['wavelet']['text'] = '信号经小波变换后所得结果'
+    if (resultsToGenerateConclusion['wavelet']['imageBase64List'] < 1){
+      resultsToGenerateConclusion['wavelet']['imageBase64List'].push(value)
     }
     waveletResultsOfSensors.value.push({label: key.split('_')[0], name: sensorId.toString()})
   }
+  resultsToGenerateConclusion['wavelet']['texts'].push(`对输入的${sensorId}个传感器信号进行小波变换去噪后所得结果如下`)
   // console.log('results_of_sensors: ', waveletResultsOfSensors)
   // console.log('denoiseFigures: ', denoiseFigures)
   // displayDenoise.value = true
@@ -7946,7 +7835,7 @@ watch(moduleResultToGenerateList, (newVal) => {
 
   // 确保至少保留第一项
   if (newVal.length === 0 && filteredModules.value.length > 0) {
-    moduleResultToGenerateList.value = [filteredModules.value[1]];
+    moduleResultToGenerateList.value = [filteredModules.value[0]];
   }
 });
 // const toggleSelectAll = () => {
@@ -7995,7 +7884,7 @@ let mapping = {
 // 生成总结报告pdf
 const generateConclusion = async() => {
   // clearGenerateResult()
-  // 生成所选模块的报告
+  // 生成所选模块的结果报告
   if(moduleResultToGenerateList.value.length === 0){
     ElMessage({
       message: '请选择生成报告中所包含的结果',
@@ -8003,6 +7892,9 @@ const generateConclusion = async() => {
     })
     return
   }
+  // 清空报告结果
+  clearGenerateResult()
+
   // 将中文的模块名转换为英文
   resultsToGenerateConclusion.includedModules = moduleResultToGenerateList.value.map(item => mapping[item])
   // console.log('resultsToGenerateOutput: ', resultsToGenerateConclusion)
@@ -8010,6 +7902,7 @@ const generateConclusion = async() => {
   canShowResults.value = true
   console.log("canShowResults: ", canShowResults.value)
 
+  // await clearGenerateResult();
   // 生成选择的模块名对应的结果报告
   moduleResultToGenerateList.value.forEach(moduleName => {
     if (missionComplete.value){
