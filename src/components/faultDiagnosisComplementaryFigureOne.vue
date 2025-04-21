@@ -104,7 +104,7 @@ const renderChart = () => {
 
   const option = {
     title: {
-      text: "故障与无故障特征均值对比",
+      text: "有故障与无故障样本特征均值对比",
       left: "center",
     },
     tooltip: {
@@ -112,7 +112,7 @@ const renderChart = () => {
       axisPointer: { type: "shadow" },
     },
     legend: {
-      data: ["故障", "无故障"],
+      data: ["有故障", "无故障"],
       top: 30,
     },
     grid: {
@@ -132,7 +132,7 @@ const renderChart = () => {
     yAxis: { type: "value" },
     series: [
       {
-        name: "故障",
+        name: "有故障",
         type: "bar",
         data: features.map((feature) => props.data.fault[feature]),
         itemStyle: { color: "#c23531" },

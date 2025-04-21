@@ -7,11 +7,31 @@
           @change="loadModuleCode"
           style="width: 200px"
         >
-          <a-select-option v-for="module in allModules" :value="module.value">{{
-            module.label
-          }}</a-select-option>
+          <a-select-opt-group>
+            <template #label>
+              <span style="font-weight: bold; font-size: 16px">
+                <!-- <user-outlined /> -->
+                系统固有组件
+              </span>
+            </template>
+            <a-select-option v-for="module in moduleCanEditCodeForTraining" :key="module.value" :value="module.value">
+              {{ module.label }}
+            </a-select-option>
+          </a-select-opt-group>
+          <a-select-opt-group>
+            <template #label>
+              <span style="font-weight: bold; font-size: 16px">
+                <!-- <user-outlined /> -->
+                上传组件
+              </span>
+            </template>
+            <a-select-option v-for="module in userAlgorithms" :key="module.value" :value="module.value">
+              {{ module.label }}
+            </a-select-option>
+          </a-select-opt-group>
         </a-select>
-        <a-button @click="exportCode">导出代码</a-button>
+        <!-- <a-button @click="toggleEdit">编辑</a-button> -->
+        <a-button @click="exportCode">保存代码到本地</a-button>
       </a-space>
     </div>
     <div class="editor">
@@ -21,6 +41,7 @@
         border
         height="600px"
         width="100%"
+        :readOnly="!isEditable"
         @change="onChange"
         @input="onInput"
         @ready="onReady"
@@ -31,6 +52,7 @@
 
 <script>
 import { ref, onMounted, computed } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import Codemirror from "codemirror-editor-vue3";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/idea.css";
@@ -81,14 +103,8 @@ export default {
 
     const userAlgorithms = ref([]);
 
-    const allModules = computed(() => {
-      return [...moduleCanEditCodeForTraining, ...userAlgorithms.value];
-    });
-
     const fetchUserAlgorithms = async () => {
       try {
-        // const response = await fetch('/user/get_private_algorithm_files');
-        // const data = await response.json();
         api.get("/user/get_private_algorithm_files").then((response) => {
           if (response.data.code === 401) {
             ElMessageBox.alert("登录状态已失效，请重新登陆", "提示", {
@@ -112,11 +128,32 @@ export default {
       }
     };
 
+    // const loadModuleCode = () => {
+    //   let selected = allModules.value.find(
+    //     (module) => module.value === selectedModule.value
+    //   );
+    //   if (pythonFilePaths[selectedModule.value]) {
+    //     fetch(pythonFilePaths[selectedModule.value])
+    //       .then((response) => response.text())
+    //       .then((data) => {
+    //         code.value = data;
+    //       })
+    //       .catch((error) => {
+    //         console.error("无法打开文件:", error);
+    //       });
+    //   } else if (selected) {
+    //     code.value = selected.source_code || "";
+    //     console.log("Selected module found in allModules:", selected);
+    //   } else {
+    //     console.log("Selected module not found in allModules:", selectedModule.value);
+    //   }
+    // };
     const loadModuleCode = () => {
-      let selected = allModules.value.find(
+      let selected = moduleCanEditCodeForTraining.find(
+        (module) => module.value === selectedModule.value
+      ) || userAlgorithms.value.find(
         (module) => module.value === selectedModule.value
       );
-      // 如果在pythonFilePaths中找到对应的文件路径，则从文件中读取代码
       if (pythonFilePaths[selectedModule.value]) {
         fetch(pythonFilePaths[selectedModule.value])
           .then((response) => response.text())
@@ -126,36 +163,54 @@ export default {
           .catch((error) => {
             console.error("无法打开文件:", error);
           });
-      }
-      else if (selected) {
+      } else if (selected) {
         code.value = selected.source_code || "";
-        console.log("Selected module found in allModules:", selected); // 添加日志
+        console.log("Selected module found:", selected);
       } else {
-        console.log("Selected module not found in allModules:", selectedModule.value);
-        // console.log('hahahahahaha')
-        // const filePath = pythonFilePaths[selectedModule.value];
-        // if (filePath) {
-        //   fetch(filePath)
-        //     .then((response) => response.text())
-        //     .then((data) => {
-        //       code.value = data;
-        //     })
-        //     .catch((error) => {
-        //       console.error("无法打开文件:", error);
-        //     });
-        // }
+        console.log("Selected module not found:", selectedModule.value);
       }
     };
 
-    const exportCode = () => {
+    const exportCode = async () => {
       const content = code.value;
-      const blob = new Blob([content], { type: "text/plain" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${selectedModule.value || "modified_code"}.py`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      if (!content) {
+        ElMessage.error("没有代码可以导出");
+        return;
+      }
+
+      if (window.showSaveFilePicker) {
+        try {
+          const options = {
+            suggestedName: `${selectedModule.value || "modified_code"}.py`,
+            types: [
+              {
+                description: "Python Files",
+                accept: {
+                  "text/plain": [".py"],
+                },
+              },
+            ],
+          };
+          const fileHandle = await window.showSaveFilePicker(options);
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          ElMessage.success("代码已成功导出");
+        } catch (error) {
+          console.error("导出代码失败:", error);
+          ElMessage.error("导出代码失败，请重试");
+        }
+      } else {
+        // Fallback for browsers that do not support showSaveFilePicker
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${selectedModule.value || "modified_code"}.py`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        ElMessage.success("代码已成功导出");
+      }
     };
 
     const onChange = (val) => {
@@ -170,24 +225,35 @@ export default {
       cm.on("inputRead", () => {
         cm.showHint();
       });
-      // cm.showHint(); // 显示代码提示
-      // console.log('Editor ready:', cm);
+    };
+    const toggleEdit = () => {
+      isEditable.value = !isEditable.value;
+      if (isEditable.value) {
+        ElMessage.success("代码编辑已启用");
+      } else {
+        ElMessage.info("代码编辑已禁用");
+      }
     };
 
     onMounted(() => {
       fetchUserAlgorithms();
     });
 
+    const isEditable = ref(false);
+
     return {
       code,
       selectedModule,
       cmOptions,
-      allModules,
+      moduleCanEditCodeForTraining,
+      userAlgorithms,
       loadModuleCode,
       exportCode,
       onChange,
       onInput,
       onReady,
+      isEditable,
+      toggleEdit
     };
   },
 };

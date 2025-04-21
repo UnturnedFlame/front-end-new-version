@@ -20,10 +20,9 @@
       <el-table-column prop="audition_time" label="审批时间" />
 
       <!-- <el-table-column prop="password" label="密码" /> -->
-      <el-table-column label="操作" width="300px">
+      <el-table-column label="操作" width="460px">
         <template #default="scope">
-          <div style="display: flex;">
-            <!-- 单选框 -->
+          <div class="button-container">
             <el-popover placement="bottom" :width="500" trigger="click">
               <el-descriptions :title="modelName" :column="3" direction="vertical">
                 <el-descriptions-item label="使用模块" :span="3">
@@ -38,12 +37,7 @@
                 </el-descriptions-item>
               </el-descriptions>
               <template #reference>
-                <el-button
-                  size="small"
-                  type="info"
-                  style="width: 80px"
-                  @click="showModelInfo(scope.row)"
-                >
+                <el-button type="info" @click="showModelInfo(scope.row)">
                   查看模型
                 </el-button>
               </template>
@@ -55,18 +49,7 @@
               @confirm="handleDeleteApplication(scope.$index, scope.row)"
             >
               <template #reference>
-                <!-- <el-button
-                  size="large"
-                  type="danger"
-                  circle
-                  plain
-                  style="margin-right: 10px"
-                  ><el-icon><Delete /></el-icon
-                ></el-button> -->
-                <el-button
-                  type="danger"
-                  style="max-width: 100px;"
-                  >删除</el-button>
+                <el-button type="danger" style="max-width: 100px">删除</el-button>
               </template>
 
               <template #actions="{ confirm, cancel }">
@@ -85,65 +68,22 @@
 
             <!-- 审核发布模型申请 -->
             <el-button
-              style="width: 100px"
               type="success"
               v-if="scope.row.status === '未处理'"
               @click="publishModelConfirm(scope.$index, scope.row)"
               >通过</el-button
             >
             <el-button
-              style="width: 100px"
               type="warning"
               v-if="scope.row.status === '未处理'"
               @click="publishModelDenny(scope.$index, scope.row)"
               >不通过</el-button
             >
-            <!-- <el-popconfirm
-              title="你确定该条申请吗?"
-              @confirm="handleDeleteApplications(scope.$index, scope.row)"
-              width="100px"
-            >
-              <template #reference>
-                <el-button
-                  size="large"
-                  type="danger"
-                  circle
-                  plain
-                  style="margin-right: 10px"
-                  ><el-icon><Delete /></el-icon
-                ></el-button>
-              </template>
 
-              <template #actions="{ confirm, cancel }">
-                <el-row>
-                  <el-col :span="12"
-                    ><el-button size="small" @click="cancel">取消</el-button></el-col
-                  >
-                  <el-col :span="12">
-                    <el-button type="primary" size="small" @click="confirm">
-                      确定
-                    </el-button>
-                  </el-col>
-                </el-row>
-              </template>
-            </el-popconfirm> -->
-
-            <!-- <span
-              style="
-                margin-left: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-width: 100px;
-              "
-            >
-              <p>是否已处理：</p>
-              <el-checkbox
-                v-model="scope.row.processed"
-                @change="handleProcessedChange(scope.row)"
-                style="margin-left: 10px"
-              ></el-checkbox
-            ></span> -->
+            <el-button size="large" type="text" @click="downloadReport(scope.row.model_id)">
+              下载测试报告
+            </el-button>
+            
           </div>
         </template>
       </el-table-column>
@@ -167,6 +107,7 @@ interface publishModelApplication {
   modelName: string;
   status: string;
   create_time: string;
+  model_id: number;
   // processed: boolean;
 }
 const tableData = reactive<publishModelApplication[]>([]);
@@ -176,14 +117,14 @@ const router = useRouter(); // 获取路由实例
 // 查看模型的具体信息，按如下方式构造信息卡片
 const modelName = ref("");
 const modelAlgorithms = ref([]);
-const modelParams = ref([]); 
+const modelParams = ref([]);
 
 // {'模块名': xx, '算法': xx, '参数': xx}
 const showModelInfo = (row) => {
   let objects = JSON.parse(row.model_info);
-  console.log("showModelInfo objects: ", objects)
+  console.log("showModelInfo objects: ", objects);
   let node_list = objects.nodeList.nodes; // 模型节点信息
-  console.log("------", node_list)
+  console.log("------", node_list);
   let connection = objects.modelConfig.modules; // 模型连接顺序
 
   modelName.value = row.model_name;
@@ -196,7 +137,6 @@ const showModelInfo = (row) => {
     modelParams.value.push(item);
   });
 };
-
 
 // 获取用户提交的模型发布申请
 const fetchPublishRequests = () => {
@@ -231,7 +171,6 @@ const fetchPublishRequests = () => {
 onMounted(() => {
   fetchPublishRequests();
 });
-
 
 // 删除某条模型发布申请
 const handleDeleteApplication = (index: number, row: any) => {
@@ -304,7 +243,7 @@ const publishModelConfirm = (index: number, row: publishModelApplication) => {
             callback: () => {
               router.push("/");
             },
-          })
+          });
         } else {
           ElMessage.error("发布模型申请审核失败，" + response.data.message);
         }
@@ -326,20 +265,58 @@ const publishModelDenny = (index: number, row: publishModelApplication) => {
       if (response.data.code == 200) {
         ElMessage.success("发布模型申请审核不通过");
         fetchPublishRequests();
-      }else{
-      if (response.data.code == 401) {
+      } else {
+        if (response.data.code == 401) {
+          ElMessageBox.alert("登录状态已失效，请重新登陆", "提示", {
+            confirmButtonText: "确定",
+            callback: () => {
+              router.push("/");
+            },
+          });
+        } else {
+          ElMessage.error("发布模型申请审核失败，" + response.data.message);
+        }
+      }
+    })
+    .catch(() => {
+      ElMessage.error("发布模型申请审核失败，请稍后重试");
+    });
+};
+
+// 下载报告
+const downloadReport = (modelId: number) => {
+  api
+    .get(`fetch_model_report/?modelId=${modelId}`, {
+      responseType: "blob", // 设置响应类型为 blob
+    })
+    .then((response: any) => {
+      if (response.status === 200) {
+        // 下载成功
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `report_${modelId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+      } else if (response.status === 401) {
         ElMessageBox.alert("登录状态已失效，请重新登陆", "提示", {
           confirmButtonText: "确定",
           callback: () => {
             router.push("/");
           },
         });
+      } else if (response.status === 404) {
+        ElMessage.error("报告文件不存在");
       } else {
-        ElMessage.error("发布模型申请审核失败，" + response.data.message);
-      }}
+        ElMessage.error("下载报告失败，请重试");
+      }
     })
-    .catch(() => {
-      ElMessage.error("发布模型申请审核失败，请稍后重试");
+    .catch((error: any) => {
+      ElMessage({
+        message: "下载报告失败，请重试",
+        type: "error",
+      });
+      console.error(error);
     });
 };
 </script>
@@ -400,5 +377,34 @@ const publishModelDenny = (index: number, row: publishModelApplication) => {
 .el-button--primary.is-plain:hover {
   background-color: #e0f3ff;
   color: #409eff;
+}
+
+.private-algorithm-button {
+  background-color: #ffffff;
+  color: #333333;
+  font-size: 16px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.private-algorithm-button {
+  background-color: #ffffff;
+  color: #333333;
+  font-size: 16px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px; /* 按钮之间的间距 */
+}
+
+.button-container .el-button {
+  width: 80px; /* 调整按钮宽度 */
 }
 </style>

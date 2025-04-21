@@ -1021,7 +1021,7 @@ const saveSelectedAttributeFile = () => {
       formData.append("datasetId", selectAttributeForm.selectedFileId);
       formData.append("description", selectAttributeForm.description);
 
-      console.log("正在提交表单曹村新文件。。。");
+      // console.log("正在提交表单曹村新文件。。。");
       uploading.value = true;
       api.post("user/save_selected_file/", formData).then((response: any) => {
         if (response.data.code === 200) {

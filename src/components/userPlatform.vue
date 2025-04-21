@@ -196,7 +196,7 @@
               <img src="../assets/algorithms-icon.svg"
                    style="width: 40px; height: auto; color: #34374f"/>
               <span v-if="userRole === 'superuser'">模型构建</span>
-              <span v-if="userRole === 'user'">模型库</span>
+              <span v-if="userRole === 'user'">历史模型</span>
             </div>
             <!--      菜单面板 accordion手风琴模式      -->
             <my-collapse
@@ -521,11 +521,11 @@
               <my-collapse-item v-if="userRole === 'superuser'" @click="openCodeEditPanel" name="6" :data="{name:'6'}" item-background="#ebeef4">
                 <template #title>
                   <div style="padding: 10px;">
-                    <span style="font-size: 20px; width: 100%" >组件代码</span>
+                    <span style="font-size: 20px; width: 100%" >组件源码</span>
                   </div>
                   <!-- 修改源码 -->
                  <div>
-                   <a-modal v-model:open="codeEditDialogVisible" title="组件代码编辑" :footer="null" style="width: 60%">
+                   <a-modal v-model:open="codeEditDialogVisible" title="组件源码在线编辑" :footer="null" style="width: 60%">
                      <editCodeEmbedded :moduleWithCode="moduleWithCode" :canOpenCodeEditor="canOpenCodeEditor"/>
                    </a-modal>
                  </div>
@@ -536,7 +536,7 @@
               <my-collapse-item v-if="userRole === 'superuser'" name="7" :data="{name:'7'}" item-background="#ebeef4">
                 <template #title>
                   <div style="padding: 10px;">
-                    <span style="font-size: 20px;">模型库</span>
+                    <span style="font-size: 20px;">历史模型</span>
                   </div>
                 </template>
                 <template #arrow="{ isActive }">
@@ -1447,27 +1447,19 @@
                           </a-modal>
                         </div>
                         <div  v-show="showResultSs==='连续样本指标变换'">
-                          <div id="indicatorVaryingFigure" style="width: 1200px; height: 500px"></div>
-                          <el-table :data="featuresStatisticsTableData" style="width: 100%" max-height="250" border>
+                          <div id="indicatorVaryingFigure" style="width: 1200px; height: 500px; margin-bottom: 30px"></div>
+        
+                          <faultDiagnosisComplementaryFigureOne :data="dataToShowFeatureDiffBetweenFaultAndNoFault"/>
+
+                          <!-- 不同特征统计量表格数据 -->
+                          <!-- <el-table :data="featuresStatisticsTableData" style="width: 100%" max-height="250" border>
                             <el-table-column prop="feature_name" label="指标名称"/>
                             <el-table-column prop="max" label="最大值" />
                             <el-table-column prop="min" label="最小值" />
                             <el-table-column prop="max_subtracts_min" label="最大值 - 最小值" />
                             <el-table-column prop="mean" label="均值" />
                             <el-table-column prop="variance" label="方差" />
-                            <!-- <el-table-column fixed="right" label="Operations" min-width="120">
-                              <template #default="scope">
-                                <el-button
-                                  link
-                                  type="primary"
-                                  size="small"
-                                  @click.prevent="deleteRow(scope.$index)"
-                                >
-                                  Remove
-                                </el-button>
-                              </template>
-                            </el-table-column> -->
-                          </el-table>
+                          </el-table> -->
                         </div>
                         <div  v-show="showResultSs==='不同类型样本占比'">
                           <!-- 故障样本与非故障样本数量饼状图 -->
@@ -1487,47 +1479,7 @@
                             />
                           </div>
                         </div>
-<!--                        <el-tabs v-model="faultDiagnosisResultOption" tab-position="top">-->
-<!--                        -->
-<!--&lt;!&ndash;                          <el-tab-pane key="1" label="连续样本指标变化" v-if="canShowIndicator">&ndash;&gt;-->
-<!--&lt;!&ndash;                            &lt;!&ndash; 连续样本指标变化的折线图 &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                            <div id="indicatorVaryingFigure" style="width: 1200px; height: 500px"></div>&ndash;&gt;-->
-<!--&lt;!&ndash;                          </el-tab-pane>&ndash;&gt;-->
-<!--&lt;!&ndash;                          <el-tab-pane key="2" label="不同类型样本占比">&ndash;&gt;-->
-<!--&lt;!&ndash;                            &lt;!&ndash; 故障样本与非故障样本数量饼状图 &ndash;&gt;&ndash;&gt;-->
-<!--&lt;!&ndash;                            <div id="faultExampleRatioFigure" style="width: 1200px; height: 500px"></div>&ndash;&gt;-->
-<!--&lt;!&ndash;                          </el-tab-pane>&ndash;&gt;-->
-<!--                          <el-tab-pane key="4" label="故障诊断结果">-->
-<!--                            <div style="width: 1200px; height: 500px;display: flex; flex-direction: column; align-items: center">-->
-<!--                              <span>{{ faultDiagnosisComplementarySummary }}</span>-->
-<!--                              <el-image-->
-<!--                                  style="width: auto; height: 450px;"-->
-<!--                                  :src="faultDiagnosisComplementaryFigure"-->
-<!--                                  :zoom-rate="1.2"-->
-<!--                                  :max-scale="7"-->
-<!--                                  :min-scale="0.2"-->
-<!--                                  :preview-src-list="[faultDiagnosisComplementaryFigure]"-->
-<!--                                  :initial-index="4"-->
-<!--                                  fit="cover"-->
-<!--                              />-->
-<!--                            </div>-->
-<!--                          </el-tab-pane>-->
-<!--                          <el-tab-pane key="3" label="原始信号波形图">-->
-<!--                            <div style="width: 1200px; height: 500px">-->
-<!--                              <el-image-->
-<!--                                  style="width: auto; height: 450px;"-->
-<!--                                  :src="faultDiagnosisFigure"-->
-<!--                                  :zoom-rate="1.2"-->
-<!--                                  :max-scale="7"-->
-<!--                                  :min-scale="0.2"-->
-<!--                                  :preview-src-list="[faultDiagnosisFigure]"-->
-<!--                                  :initial-index="4"-->
-<!--                                  fit="cover"-->
-<!--                              />-->
-<!--                            </div>-->
-<!--                          </el-tab-pane>-->
-<!--                          -->
-<!--                        </el-tabs>-->
+
                       </div>
 
                       <!-- 故障故障预测可视化 -->
@@ -1911,6 +1863,7 @@ import PublishModel from './PublishModel.vue';
 import datasetManagement from './datasetManagement.vue';
 //////////////////////////////////////////////////////////////////系统组件源码编辑相关
 import editCodeEmbedded from './editCodeEmbedded.vue';
+import faultDiagnosisComplementaryFigureOne from './faultDiagnosisComplementaryFigureOne.vue';
 
 
 // 选中类型，返回id
@@ -3595,6 +3548,7 @@ function runModelOfViewFlow() {
     ElMessage.warning("请先点击检查按钮，完成模型检查")
     return
   }
+  buildContentJson();
 
   if (!usingDatafile.value) {
     ElMessage({
@@ -7167,7 +7121,7 @@ const featuresSelectionDisplay = (resultsObject: any) => {
             left: 'right',
             top: 'top',
             style: {
-              text: `特征系数总和达到阈值: ${thresholdValue}`,
+              text: `特征系数总和占比达到阈值: ${thresholdValue}`,
               textAlign: 'right',
               fill: '#f00', // 文字颜色
               fontSize: 17 // 字体大小
@@ -7261,6 +7215,31 @@ const feedBack = () => {
 }
 
 
+// 调整图例每一行显示个数
+const LINE_NUM_EACH_ROW = 6; // 图例中每行显示的线条数目；
+// echart 调整图例显示样式 {图例太多时，Echarts文档注明: 特殊字符串 ''（空字符串）或者 '\n' (换行字符串)用于图例的换行。}
+function  adjustLegendData(legendData) {
+    let processLegend=[];
+    // 调整图例显示样式 {图例太多时，Echarts文档注明: 特殊字符串 ''（空字符串）或者 '\n' (换行字符串)用于图例的换行。}
+    for (let i = 0,j=0; i < legendData.length; i++,j++) {
+        // 设置一行显示6个图标
+        if (i%LINE_NUM_EACH_ROW==0){
+            processLegend.push("\n");
+        }
+        processLegend.push(legendData[i]);
+    }
+    return processLegend;
+}
+
+// 获取随机颜色
+const generateColor = () => {
+  let color = "";
+  let r = Math.floor(Math.random() * 256);
+  let g = Math.floor(Math.random() * 256);
+  let b = Math.floor(Math.random() * 256);
+  color = `rgb(${r},${g},${b})`;
+  return color; 
+}
 
 // 故障诊断结果展示
 const displayFaultDiagnosis = ref(false)
@@ -7272,16 +7251,8 @@ const faultDiagnosisComplementarySummary = ref('')  // 补充的故障诊断结�
 const faultDiagnosisResultsText = ref('')
 const faultDiagnosisResultOption = ref('2')
 const featuresStatisticsTableData = ref([])
+const dataToShowFeatureDiffBetweenFaultAndNoFault = ref({})
 
-// 获取随机颜色
-const generateColor = () => {
-  let color = "";
-  let r = Math.floor(Math.random() * 256);
-  let g = Math.floor(Math.random() * 256);
-  let b = Math.floor(Math.random() * 256);
-  color = `rgb(${r},${g},${b})`;
-  return color; 
-}
 
 
 const canShowIndicator = ref(false)
@@ -7296,6 +7267,12 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
   let num_has_fault = resultsObject.num_has_fault
   let num_has_no_fault = resultsObject.num_has_no_fault
 
+  let mean_value_of_each_feature = resultsObject.mean_value_of_each_feature
+
+  dataToShowFeatureDiffBetweenFaultAndNoFault.value = mean_value_of_each_feature
+
+  console.log("faultDiagnosisDisplay resultsObject mean_value_of_each_feature: ", mean_value_of_each_feature)
+
   // console.log('num_has_fault: ', num_has_fault)
   // console.log('num_has_no_fault: ', num_has_no_fault)
   // console.log('indicator: ', indicator)
@@ -7306,6 +7283,8 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
 
   // 获取indicator的key
   let indicatorKeys = Object.keys(indicator)
+
+  let dataLegend = adjustLegendData(indicatorKeys)
 
   nextTick(() => {
 
@@ -7336,7 +7315,11 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
             left: 'center',
             top: '5%',
             bottom: '6%',
-            data: indicatorKeys
+            data: dataLegend,
+            selected: dataLegend.reduce((acc, key, index) => {
+              acc[key] = index === 0; // 只有第一个元素被设置为 true
+              return acc;
+            }, {})
           },
           grid: {
             left: '5%',
