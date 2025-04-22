@@ -104,7 +104,7 @@ const renderChart = () => {
 
   const option = {
     title: {
-      text: "有故障与无故障样本特征均值对比",
+      text: "有故障样本与无故障样本特征均值对比",
       left: "center",
     },
     tooltip: {

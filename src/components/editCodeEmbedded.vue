@@ -115,7 +115,7 @@ export default {
             });
           } else {
             let res = response.data.result;
-            console.log('res: ', res)
+            // console.log('res: ', res)
             userAlgorithms.value = res.map((algorithm) => ({
               label: algorithm.alias,
               value: algorithm.alias,
@@ -236,6 +236,7 @@ export default {
     };
 
     onMounted(() => {
+      console.log("onMounted");
       fetchUserAlgorithms();
     });
 
@@ -248,6 +249,7 @@ export default {
       moduleCanEditCodeForTraining,
       userAlgorithms,
       loadModuleCode,
+      fetchUserAlgorithms,
       exportCode,
       onChange,
       onInput,
