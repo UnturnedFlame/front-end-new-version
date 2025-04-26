@@ -15,6 +15,11 @@ import AntiDesignVue from 'ant-design-vue';
 import {createPinia} from "pinia";
 import '@fortawesome/fontawesome-free/css/all.css';
 
+import Antd from 'ant-design-vue';
+import zhCN from 'ant-design-vue/es/locale/zh_CN';  // 引入中文语言包
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';  // 引入 dayjs 的中文语言包
+
 VMdPreview.use(vuepressTheme);
 
 const pinia =createPinia()
@@ -23,6 +28,14 @@ const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component)
   }
+
+app.use(Antd, {
+  locale: zhCN,  // 配置 Ant Design Vue 的语言为中文
+});
+
+dayjs.locale('zh-cn');  // 配置 dayjs 的语言为中文
+
+
 app.use(ElementPlus)
 app.use(pinia)
 app.use(Vue3DraggableResizable)

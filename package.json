@@ -25,6 +25,7 @@
     "codemirror": "^5.65.18",
     "codemirror-editor-vue3": "^2.8.0",
     "echarts": "^5.5.1",
+    "echarts-gl": "^2.0.9",
     "element-plus": "^2.7.0",
     "jsplumb": "^2.15.6",
     "lodash": "^4.17.21",

@@ -194,7 +194,7 @@ watch(
 
 <style scoped>
 .chart-container {
-  width: 100%;
+  width: 1200px;
   height: 600px;
 }
 </style>

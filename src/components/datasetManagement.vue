@@ -83,12 +83,12 @@
               />
               <el-table-column
                 property="dataset_name"
-                label="文件名称"
+                label="数据集名称"
                 show-overflow-tooltip
               />
               <el-table-column
                 property="description"
-                label="文件描述"
+                label="数据集描述"
                 show-overflow-tooltip
               />
               <el-table-column
@@ -155,7 +155,7 @@
                   @finish="onFinish"
                 >
                   <a-form-item
-                    label="文件名称"
+                    label="数据集名称"
                     name="filename"
                     :rules="[
                       { required: true, message: '请输入文件名!' },
@@ -176,14 +176,14 @@
                     </div>
                   </a-form-item>
                   <a-form-item
-                    label="文件描述"
+                    label="数据集描述"
                     name="description"
                     :rules="[
-                      { required: true, message: '请输入文件描述!' },
+                      { required: true, message: '请输入数据集描述!' },
                       {
                         min: 1,
-                        max: 200,
-                        message: '长度应在1到200个字符之间!',
+                        max: 500,
+                        message: '长度应在1到500个字符之间!',
                         trigger: 'blur',
                       },
                     ]"
@@ -191,43 +191,99 @@
                     <a-input
                       v-model:value="dataFileFormState.description"
                       autofocus
-                      placeholder="请输入文件描述"
+                      placeholder="请输入数据集描述"
                     />
-                    <!-- 提示文件描述命名规则 -->
+                    <!-- 提示数据集描述命名规则 -->
                     <div style="color: #999; font-size: 12px">(长度不超过200字符)</div>
                   </a-form-item>
+                  <a-form-item 
+                    label="数据采集对象" 
+                    name="dataPickObject"
+                    :rules="[
+                      { required: true, message: '请输入数据采集对象!' },
+                      {
+                        min: 1,
+                        max: 500,
+                        message: '长度应在1到500个字符之间!',
+                        trigger: 'blur',
+                      },
+                    ]"
+                  >
+                    <a-input
+                      v-model:value="dataFileFormState.dataPickObject"
+                      autofocus
+                      placeholder="请输入数据采集对象"
+                    />
+                    <!-- 提示数据集描述命名规则 -->
+                    <div style="color: #999; font-size: 12px">(长度不超过500字符)</div>
+                  </a-form-item>
+
+                  <a-form-item label="数据采集时间" 
+                                name="dataPickTime"
+                                :rules="[{ required: true, message: '请选择数据采集时间!' }]">
+                    <!-- <a-range-picker v-model:value="dataFileFormState.dataPickTime">
+          
+                    </a-range-picker> -->
+                    <a-range-picker v-model:value="dataFileFormState.dataPickTime" show-time />
+                  </a-form-item>
+
+                  
                   <a-form-item label="选择数据类型">
                     <a-radio-group v-model:value="dataFileFormState.multipleSensors">
                       <a-radio :value="'multiple'">多传感器数据</a-radio>
                       <a-radio :value="'single'">单传感器数据</a-radio>
                     </a-radio-group>
                   </a-form-item>
-                  <a-form-item label="是否公开">
+
+                  <!-- <a-form-item label="是否公开">
                     <a-radio-group v-model:value="dataFileFormState.isPublic">
                       <a-radio :value="'public'">是</a-radio>
                       <a-radio :value="'private'">否</a-radio>
                     </a-radio-group>
-                  </a-form-item>
+                  </a-form-item> -->
                   <a-form-item>
                     <div style="">
-                      <a-upload
-                        :file-list="fileList"
-                        :max-count="1"
-                        @remove="handleRemove"
-                        :before-upload="beforeUpload"
-                      >
-                        <a-button
-                          style="
-                            width: 180px;
-                            font-size: 16px;
-                            background-color: #2082f9;
-                            color: white;
-                          "
-                          :icon="h(FolderOpenOutlined)"
+                      <div style="display: flex; flex-direction: row;">
+                        <a-upload
+                          :file-list="fileList"
+                          :max-count="1"
+                          @remove="handleRemove"
+                          :before-upload="beforeUpload"
                         >
-                          选择本地文件
-                        </a-button>
-                      </a-upload>
+                          <a-button
+                            style="
+                              width: 220px;
+                              font-size: 16px;
+                              background-color: #2082f9;
+                              color: white;
+                              margin-bottom: 16px;
+                            "
+                            :icon="h(FolderOpenOutlined)"
+                          >
+                            选择数据集文件
+                          </a-button>
+                        </a-upload>
+                        <a-button v-if="userRole == 'superuser'" type="text" @click="uploadLabels = true"><PlusCircleOutlined />添加数据集标签</a-button>
+                      </div>
+                      <div style="display:flex; flex-direction: row;" v-if="userRole === 'superuser' && uploadLabels">
+                        <a-upload
+                          :file-list="fileList2"
+                          :max-count="1"
+                          @remove="handleRemove2"
+                          :before-upload="beforeUpload2"
+                          v-if="userRole === 'superuser'"
+                        >
+                          <a-button
+                            style="
+                              width: 220px;
+                              font-size: 16px;"
+                            :icon="h(FolderOpenOutlined)"
+                          >
+                            选择标签文件
+                          </a-button>
+                        </a-upload>
+                        <a-button type="text" @click="uploadLabels = false"><MinusCircleOutlined /></a-button>
+                      </div>
                       <!-- 文件格式提示 -->
                       <!-- <div style="margin-left: 10px">
                         <el-popover
@@ -260,7 +316,7 @@
                       html-type="submit"
                       :disabled="fileList?.length === 0"
                       :loading="uploading"
-                      style="width: 180px"
+                      style="width: 220px; font-size: 16px"
                     >
                       <UploadOutlined />
                       {{ uploading ? "正在上传" : "上传至服务器" }}
@@ -331,12 +387,12 @@
               />
               <el-table-column
                 property="dataset_name"
-                label="文件名称"
+                label="数据集名称"
                 show-overflow-tooltip
               />
               <el-table-column
                 property="description"
-                label="文件描述"
+                label="数据集描述"
                 show-overflow-tooltip
               />
               <el-table-column
@@ -437,7 +493,7 @@
                       :model="selectAttributeForm"
                       :rules="saveSelectedAttributeFileRules"
                     >
-                      <a-form-item label="文件名称" name="fileName">
+                      <a-form-item label="数据集名称" name="fileName">
                         <a-input
                           v-model:value="selectAttributeForm.fileName"
                           placeholder="请输入文件名"
@@ -447,12 +503,12 @@
                           (只能包含中英文、数字、下划线)
                         </div>
                       </a-form-item>
-                      <a-form-item label="文件描述" name="description">
+                      <a-form-item label="数据集描述" name="description">
                         <a-input
                           v-model:value="selectAttributeForm.description"
-                          placeholder="请输入文件描述"
+                          placeholder="请输入数据集描述"
                         />
-                        <!-- 提示文件描述命名规则 -->
+                        <!-- 提示数据集描述命名规则 -->
                         <div style="color: #999; font-size: 12px">
                           (长度不超过200字符)
                         </div>
@@ -559,12 +615,12 @@
               />
               <el-table-column
                 property="dataset_name"
-                label="文件名称"
+                label="数据集名称"
                 show-overflow-tooltip
               />
               <el-table-column
                 property="description"
-                label="文件描述"
+                label="数据集描述"
                 show-overflow-tooltip
               />
               <el-table-column
@@ -671,7 +727,7 @@
                         :model="selectAttributeForm"
                         :rules="saveSelectedAttributeFileRules"
                       >
-                        <a-form-item label="文件名称" name="fileName">
+                        <a-form-item label="数据集名称" name="fileName">
                           <a-input
                             v-model:value="selectAttributeForm.fileName"
                             placeholder="请输入文件名"
@@ -681,12 +737,12 @@
                             (只能包含中英文、数字、下划线)
                           </div>
                         </a-form-item>
-                        <a-form-item label="文件描述" name="description">
+                        <a-form-item label="数据集描述" name="description">
                           <a-input
                             v-model:value="selectAttributeForm.description"
-                            placeholder="请输入文件描述"
+                            placeholder="请输入数据集描述"
                           />
-                          <!-- 提示文件描述命名规则 -->
+                          <!-- 提示数据集描述命名规则 -->
                           <div style="color: #999; font-size: 12px">
                             (长度不超过200字符)
                           </div>
@@ -718,13 +774,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, watch, reactive } from "vue";
+import { ref, h, watch, reactive, computed } from "vue";
 import api from "../utils/api.js";
 import { message, UploadProps } from "ant-design-vue";
-import { FolderOpenOutlined, UploadOutlined, FileOutlined } from "@ant-design/icons-vue";
+import type { Dayjs } from 'dayjs';
+import { FolderOpenOutlined, UploadOutlined, FileOutlined, PlusCircleOutlined, MinusCircleOutlined } from "@ant-design/icons-vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Rule } from "ant-design-vue/es/form";
+import { use } from "echarts";
+
+
+const props = defineProps({
+  userRole: {
+    type: String,
+    default: 'superuser',
+  },
+});
+
+
+const userRole = computed(() => {
+  return props.userRole;
+});
 
 const searchDataKeyword = ref("");
 const fetchedDataFiles = ref<Object[]>([]);
@@ -738,6 +809,8 @@ const dataFileFormState = ref({
   description: "",
   multipleSensors: "single",
   isPublic: "private",
+  dataPickTime: [null, null] as [Dayjs | null, Dayjs | null],
+  dataPickObject: "",
 });
 
 const saveSelectedAttributeFileRules: Record<string, Rule[]> = {
@@ -750,7 +823,7 @@ const saveSelectedAttributeFileRules: Record<string, Rule[]> = {
     },
   ],
   description: [
-    { required: true, message: "请输入文件描述!", trigger: "change" },
+    { required: true, message: "请输入数据集描述!", trigger: "change" },
     {
       min: 1,
       max: 200,
@@ -853,9 +926,13 @@ const saveUnionFile = () => {
   });
 };
 
+const uploadLabels = ref(false)
+
 const uploading = ref(false);
 
-const fileList = ref<UploadProps["fileList"]>([]);
+const fileList = ref<UploadProps["fileList"]>([]);  // 数据集文件列表
+
+const fileList2 = ref<UploadProps["fileList"]>([]);  // 标签文件列表
 
 const getFileListFromDatabase = async (): Promise<boolean> => {
   let url = "user/fetch_datafiles/";
@@ -927,6 +1004,16 @@ const handleRemove: UploadProps["onRemove"] = (file) => {
   fileList.value = newFileList;
 };
 
+const handleRemove2: UploadProps["onRemove"] = (file) => {
+  if (!fileList2.value) {
+    fileList2.value = [];
+  }
+  const index = fileList2.value.indexOf(file);
+  const newFileList = fileList2.value.slice();
+  newFileList.splice(index, 1);
+  fileList2.value = newFileList;
+};
+
 const beforeUpload: UploadProps["beforeUpload"] = (file) => {
   const allowedTypes = [".npy", ".mat", ".csv"];
   const fileType = file.name.split(".").pop().toLowerCase();
@@ -938,26 +1025,58 @@ const beforeUpload: UploadProps["beforeUpload"] = (file) => {
     message.error("文件格式错误，请上传mat或npy文件");
     return false;
   }
+
   if (!fileList.value) {
     fileList.value = [];
   }
   fileList.value.length = 0;
   fileList.value = [...(fileList.value || []), file];
+
   return false;
 };
+const beforeUpload2: UploadProps["beforeUpload"] = (file) => {
+  const allowedTypes = [".npy", ".mat", ".csv"];
+  const fileType = file.name.split(".").pop().toLowerCase();
+  if (!allowedTypes.includes("." + fileType)) {
+    // ElMessage({
+    //   message: '文件格式错误，请上传mat或npy文件',
+    //   type: 'error',
+    // });
+    message.error("文件格式错误，请上传mat或npy文件");
+    return false;
+  }
+  if (!fileList2.value) {
+      fileList2.value = [];
+    }
+    fileList2.value.length = 0;
+    fileList2.value = [...(fileList2.value || []), file];
+
+  return false;
+};
+
+
+
 
 // 确认上传文件对话框
 const uploadconfirmLoading = ref<boolean>(false);
 const uploadConfirmDialog = ref<boolean>(false);
 // 确认上传文件
+
 const onFinish = () => {
   uploadconfirmLoading.value = true;
   const formData = new FormData();
   formData.append("file", fileList.value[0]);
+  formData.append("labels", fileList2.value[0]);
   formData.append("filename", dataFileFormState.value.filename);
   formData.append("description", dataFileFormState.value.description);
   formData.append("multipleSensors", dataFileFormState.value.multipleSensors);
   formData.append("isPublic", dataFileFormState.value.isPublic);
+  formData.append("dataPickObject", dataFileFormState.value.dataPickObject)
+  // 使用 format 方法格式化日期为本地时间
+  formData.append("dataPickTimeStart", dataFileFormState.value.dataPickTime[0]?.format('YYYY-MM-DDTHH:mm:ss') || '');
+  formData.append("dataPickTimeEnd", dataFileFormState.value.dataPickTime[1]?.format('YYYY-MM-DDTHH:mm:ss') || '');
+
+  console.log(dataFileFormState.value.dataPickTime[0]?.toISOString());
   uploading.value = true;
 
   api
@@ -966,7 +1085,6 @@ const onFinish = () => {
       if (response.data.message == "save data success") {
         fileList.value = [];
         uploading.value = false;
-        // message.success("数据文件上传成功");
         ElMessage({
           message: "数据文件上传成功",
           type: "success",
@@ -975,7 +1093,6 @@ const onFinish = () => {
         uploadConfirmDialog.value = false;
       } else {
         uploading.value = false;
-        // message.error("文件上传失败, " + response.data.message);
         ElMessage({
           message: "文件上传失败, " + response.data.message,
           type: "error",
@@ -994,7 +1111,6 @@ const onFinish = () => {
     .catch((error: any) => {
       uploading.value = false;
       uploadconfirmLoading.value = false;
-      // message.error("上传失败, " + error);
       ElMessage({
         message: "上传失败, " + error,
         type: "error",
@@ -1193,33 +1309,18 @@ const resetSelectAttributeForm = () => {
   selectAttributeForm.fileName = "";
   selectAttributeForm.description = "";
 };
-// 用户浏览原始数据
-// const browseDataset = (row: { dataset_name: any; }) => {
 
-// // 清除可视化区域内容
-// resultsViewClear()
-// canShowResults.value = true
-// // 发送请求获取原始数据的波形图
-// let filename = row.dataset_name
+const dataPickTime = ref<[Dayjs, Dayjs]>();
+// const getCurrentStyle = (current: Dayjs) => {
+//   const style: CSSProperties = {};
 
-// api.get('user/browse_datafile/?filename=' + filename).then((response: any) => {
-//   if (response.status === 200) {
-//     displayRawDataWaveform.value = true
-//     let data = response.data
-//     let figure = data.figure_Base64
-
-//     rawDataWaveform.value = 'data:image/png;base64,' + figure
-//     currentDataBrowsing.value = filename
-
-//     console.log('访问成功：')
-//   } else {
-//     ElMessage.error('访问文件失败')
+//   if (current.date() === 1) {
+//     style.border = '1px solid #1890ff';
+//     style.borderRadius = '50%';
 //   }
-// })
-//     .catch((error: any) => {
-//       console.log('访问文件失败：', error)
-//     })
-// }
+
+//   return style;
+// };
 </script>
 
 <style scoped></style>

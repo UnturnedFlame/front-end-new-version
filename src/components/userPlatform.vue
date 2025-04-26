@@ -57,7 +57,7 @@
           <!-- 退出 -->
           <div @click="logout" class="clickable action-item">
             <i style="margin: 5px;" class="fa-solid fa-right-from-bracket action-icon"></i>
-            <span class="action-text" style="white-space: nowrap;overflow: hidden;">退出</span>
+            <span class="action-text" style="white-space: nowrap;overflow: hidden;">登出</span>
           </div>
 
           <!-- 全屏 -->
@@ -512,7 +512,7 @@
               <my-collapse-item name="5" :data="{name:'5'}" item-background="#ebeef4">
                 <template #title>
                   <div style="width: 100%">
-                    <datasetManagement/>
+                    <datasetManagement :userRole="userRole"/>
                   </div>
                 </template>
               </my-collapse-item>
@@ -531,6 +531,16 @@
                  </div>
                 </template>
               </my-collapse-item>
+
+              <!-- 模型导出 -->
+              <!-- <my-collapse-item v-if="userRole === 'superuser'" @click="openCodeEditPanel" name="6" :data="{name:'6'}" item-background="#ebeef4">
+                <template #title>
+                  <div style="padding: 10px;">
+                    <span style="font-size: 20px; width: 100%" >模型源码导出</span>
+                  </div>
+                  
+                </template>
+              </my-collapse-item> -->
 
               <!-- 模型管理 -->
               <my-collapse-item v-if="userRole === 'superuser'" name="7" :data="{name:'7'}" item-background="#ebeef4">
@@ -555,6 +565,13 @@
                         margin-right: 1px;"
                     >
                       <PublishModel style="width: 100%;height: 100%;" :userRole="userRole" @resetModel="handleResetModel" @loadModel="handleLoadModel"/>
+                    </div>
+                    <div
+                        style="width: 100%;flex: 1;display: flex;
+                        flex-direction: column;align-items: center;justify-content: center;
+                        margin-right: 1px;"
+                    >
+                      <!-- <PublishModel style="width: 100%;height: 100%;" :userRole="userRole" @resetModel="handleResetModel" @loadModel="handleLoadModel"/> -->
                     </div>
               
                   </div>
@@ -741,12 +758,12 @@
                         class="control-operator-btn-default-css"
                         :disabled="disabledStateOfControlBtn.clearModelOfViewFlowBtn"
                         :style="{color: dark ? '#ffffff' : '#000000'}"
-                        title="下载报告">
+                        title="生成报告">
                       <div
                           style="height: 100%;width: 100%;"
                           class="control-operator-btn-default-css"
                           :style="{color: dark ? '#ffffff' : '#000000'}"
-                          title="下载报告">
+                          title="生成报告">
                         <i class="fa-solid fa-download" style="margin-right: 5px;"></i>
                         <span class="menu-item-second">报告</span>
                       </div>
@@ -1266,15 +1283,20 @@
                       <!-- 不同样本的评估结果 -->
                       <div v-show="displayHealthEvaluation" v-if="displayHealthEvaluation || generateHealthEvaluationFigure">
                         <div v-show="showResultSs==='总结论'">
-                          <div style="display:flex; flex-direction: row; align-items: center;">
-                            <div id="healthEvaluationPieChart" style="width: 600px; height: 500px"></div>
-                            <div style="width: 700px;">
-                              <el-text style="font-weight: bold; font-size: 18px;">{{
-                                  finalSuggestion
-                                }}
-                              </el-text>
+                          <div style="display: flex; flex-direction: row; align-items: center; justify-content: center;">
+                            <!-- 堆叠柱状图 -->
+                            <div id="healthEvaluationStackedBarChart" style="width: 700px; height: 500px">
+                              <healthEvaluationSummary :data="statusProbability"/>
                             </div>
-                            <!-- 绘制饼状图 -->
+                            <div style="width: 700px; display: flex; flex-direction: column; align-items: center;">
+                              <!-- 绘制饼状图 -->
+                              <div id="healthEvaluationPieChart" style="width: 600px; height: 500px"></div>
+                              <div style="width: 100%; text-align: center;">
+                                <el-text style="font-weight: bold; font-size: 18px;">{{
+                                    finalSuggestion
+                                  }}</el-text>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <div v-show="showResultSs==='详情'">
@@ -1446,6 +1468,7 @@
                             </a-form>
                           </a-modal>
                         </div>
+
                         <div  v-show="showResultSs==='连续样本指标变换'">
                           <div id="indicatorVaryingFigure" style="width: 1200px; height: 500px; margin-bottom: 30px"></div>
         
@@ -1474,6 +1497,26 @@
                                 :max-scale="7"
                                 :min-scale="0.2"
                                 :preview-src-list="[faultDiagnosisFigure]"
+                                :initial-index="4"
+                                fit="cover"
+                            />
+                          </div>
+                        </div>
+
+                        <div  v-show="showResultSs==='准确率分析'">
+                          <div style="width: 1200px; height: 500px">
+                            <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">
+                              <div style="font-size: 20px">准确率分析：</div>
+                              <div>{{ accuracyAnalysisText }}</div>
+                            </div>
+                            <el-image
+                                style="width: auto; height: 450px;"
+                                v-if="faultDiagnosisConfusionMatrix != ''"
+                                :src="faultDiagnosisConfusionMatrix"
+                                :zoom-rate="1.2"
+                                :max-scale="7"
+                                :min-scale="0.2"
+                                :preview-src-list="[faultDiagnosisConfusionMatrix]"
                                 :initial-index="4"
                                 fit="cover"
                             />
@@ -1646,45 +1689,79 @@
 
 
             <!-- 输出结果配置面板 -->
-            <el-dialog v-model="outputConfigVisible" title="模型输出" style="width: 40%; min-height: 30%">
+            <el-dialog v-model="outputConfigVisible" title="模型输出报告" style="width: 40%; min-height: 30%">
+              <template #title>
+                <div style="text-align: left; font-size: 20px;">模型输出报告</div>
+              </template>
               <div style="display: flex; flex-direction: column; justify-content: left;">
-                  <!-- <span style="">选择需要输出的结果</span>
-                  <el-check-group v-model="moduleResultToGenerateList">
-                    <el-checkbox v-for="node in nodeList" :key="node.id" :label="node.label" :value="node.label"/>
-                  </el-check-group> -->
-                <div
-                  style="
-                    padding: 30px;
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    font-family: 'Microsoft YaHei';
-                    font-size: 17px
-                  "
-                >
-                  <span>
-                    <p>选择需要输出的结果：<br/>（至少选择一项）</p>
-                  </span>
-                  
-                  
-                  <div style="max-width: 50%; margin-left: 30px">
-                    <el-checkbox
-                      v-model="selectAllModuleToGenerateResult"
-                      @change="toggleSelectAll"
-                      style=""
-                      >全选</el-checkbox
-                    >
-                  
-                    <el-checkbox-group v-model="moduleResultToGenerateList" :min="1">
-                    <!--  -->
-                      <el-checkbox size="large" v-for="module in filteredModules" :key="module" :label="module" :value="module"/>
-                    </el-checkbox-group>
-                  </div>
+                <div>
+                  <!-- 选择结果并输出到本地 -->
+                  <el-row :gutter="20">
+                    <el-col :span="24" style="display: flex; justify-content: center; margin-bottom: 10px;">
+                      <div style="font-size: 18px">选择结果输出</div>
+                    </el-col>
+                    <el-col :span="24" style="display: flex; justify-content: center;">
+                      <div style="display: flex; flex-direction: column; align-items: center;">
+                        <el-row>
+                          <el-col :span="24" style="display: flex; justify-content: center;">
+                            <el-checkbox
+                              v-model="selectAllModuleToGenerateResult"
+                              @change="toggleSelectAll"
+                            >
+                              全选
+                            </el-checkbox>
+                          </el-col>
+                          <el-col :span="24" style="display: flex; justify-content: center;">
+                            <el-checkbox-group v-model="moduleResultToGenerateList" :min="1">
+                              <el-checkbox
+                                size="large"
+                                v-for="module in filteredModules"
+                                :key="module"
+                                :label="module"
+                                :value="module"
+                              />
+                            </el-checkbox-group>
+                          </el-col>
+                        </el-row>
+                        <el-button
+                          style="width: 180px; font-size: 16px; margin-top: 20px"
+                          type="primary"
+                          @click="generateConclusion"
+                        >
+                          输出报告并下载
+                        </el-button>
+                      </div>
+                    </el-col>
+                  </el-row>
+
+                  <!-- 分隔线 -->
+                  <el-row style="margin-top: 20px; margin-bottom: 20px;">
+                    <el-col :span="24">
+                      <el-divider />
+                    </el-col>
+                  </el-row>
+
+                  <!-- 输出测试报告并保存 -->
+                  <el-row :gutter="20">
+                    <el-col :span="24" style="display: flex; justify-content: center; margin-bottom: 10px;">
+                      <div style="font-size: 18px">生成测试报告<br/>
+                        <!-- <div style="font-size: 12px">生成的测试报告会保存到服务器中</div> -->
+                      </div>
+                      
+                    </el-col>
+                    <el-col :span="24" style="display: flex; justify-content: center;">
+                      <el-button
+                        type="success"
+                        style="width: 180px; font-size: 16px"
+                        @click="generateModelTestReport"
+                        :loading="generateModelTestReportLoading"
+                      >
+                        点击生成
+                      </el-button>
+                    </el-col>
+                  </el-row>
                 </div>
-                <div style="margin-top: 50px">
-                  <el-button style="width: 180px; font-size: 17px" type="primary" @click="generateConclusion">生成输出报告</el-button>
-                 
-                </div>
+              
               </div>
             </el-dialog>
           </div>
@@ -1864,6 +1941,7 @@ import datasetManagement from './datasetManagement.vue';
 //////////////////////////////////////////////////////////////////系统组件源码编辑相关
 import editCodeEmbedded from './editCodeEmbedded.vue';
 import faultDiagnosisComplementaryFigureOne from './faultDiagnosisComplementaryFigureOne.vue';
+import healthEvaluationSummary from './healthEvaluationSummary.vue';
 
 
 // 选中类型，返回id
@@ -1883,6 +1961,8 @@ const handleResetModel = (modelName: string) => {
   }
 }
 
+
+// 加载模型
 let modelLoadedName = ref(''); // 已加载模型的名称
 // 点击子组件publishModel的历史模型表格中使用按钮复现用户历史模型
 const handleLoadModel = (store: any) => {
@@ -1907,9 +1987,10 @@ const handleLoadModel = (store: any) => {
   modelLoaded.value = store.value.modelName
   modelLoadedName.value = store.value.modelName
   modelLoadedId = String(store.value.modelId)
-  console.log("modelLoaded: ", modelLoaded.value)
-  console.log("modelLoadedId: ", modelLoadedId)
 
+  modelId = store.value.modelId  // 获取modelId，在调用生成模型测试报告接口时传递给后端，将生成的报告保存到对应模型
+
+  console.log('handleLoadModel modelId: ', modelId)
 }
 // 用户查看源文件
 const browseDataset = (row: { dataset_name: any; }) => {
@@ -3561,6 +3642,7 @@ function runModelOfViewFlow() {
   const data = new FormData()
   data.append("file_name", usingDatafile.value)  // 所使用的数据文件
   data.append('params', JSON.stringify(contentJson))  // 模型信息
+  // data.append('model_schedule', contentJson)
   // console.log('params: ', contentJson)
   if (usingDatafile.value == '无') {
     ElMessage({
@@ -3684,14 +3766,6 @@ function runModelOfViewFlow() {
       })
 }
 
-//终止运行
-function stopRunningModelOfViewFlow() {
-
-}
-
-//配置模型
-function setModelConfigRunningModelOfViewFlow() {
-}
 
 //实现自动垂直水平布局功能、打乱功能
 import {useRunProcess} from './vueflow/useRunProcess'
@@ -3699,6 +3773,7 @@ import {useShuffle} from './vueflow/useShuffle'
 import {useLayout} from './vueflow/useLayout'
 import CustomForm from "@/components/vueflow/CustomForm.vue";
 import { get, keyBy, result } from 'lodash';
+import { fa } from 'element-plus/es/locale/index.mjs';
 
 const cancelOnError = ref(true)
 const shuffle = useShuffle()
@@ -6499,6 +6574,8 @@ const filterTreeData = (data) => {
   });
 }
 
+
+let modelId;
 // 用于控制模型树子组件
 const superComponentTree = ref()
 // 完成模型名称等信息的填写后，确定保存模型
@@ -6559,6 +6636,8 @@ const saveModelConfirm = async (formEl: FormInstance | undefined) => {
           superComponentTree.value.fetchModelInfoFromDatabase()
           getComponentTrees();
 
+          modelId = response.data.model_id
+          console.log('saveModelConfirm modelId: ', modelId);
           modelsDrawer.value = true       // 关闭历史模型抽屉
           dialogFormVisible.value = false    // 关闭提示窗口
           dialogModle.value = false
@@ -6607,6 +6686,7 @@ const levelIndicatorsOfAllExamples = ref({});
 const statusOfExamples = ref({});
 const suggestionOfAllExamples = ref({});
 const finalSuggestion = ref('');
+const statusProbability = ref([]);
 // const healthEvaluationFigure1 = ref('data:image/png;base64,')
 // const healthEvaluationFigure2 = ref('data:image/png;base64,')
 // const healthEvaluationFigure3 = ref('data:image/png;base64,')
@@ -6715,6 +6795,8 @@ let figure2 = results_object.二级指标权重柱状图_Base64
 let figure3 = results_object.评估结果柱状图_Base64
 let suggestions = results_object.评估建议
 
+statusProbability.value = results_object.样本状态隶属概率
+
 // 显示各个样本健康评估的可视化结果
 resultsBarOfAllExamples.value = {}
 figure1.forEach((element: string, index: number) => {
@@ -6752,8 +6834,16 @@ nextTick(() => {
   let imgSrc
   if(!existingChart){
 
-    var pieChart = echarts.init(pieChartDom);
-    var pieChartOption;
+    let pieChart = echarts.init(pieChartDom);
+    let pieChartOption;
+
+    // 定义颜色映射
+    let colorMap = {
+      '正常': '#4CAF50',
+      '轻微退化': '#FFC107',
+      '严重退化': '#FF9800',
+      '失效': '#F44336'
+    };
 
     pieChartOption = {
       animation: false,
@@ -6774,11 +6864,7 @@ nextTick(() => {
           name: '样本数量',
           type: 'pie',
           radius: '50%',
-          data: [
-            // { value: 580, name: 'Email' },
-            // { value: 484, name: 'Union Ads' },
-            // { value: 300, name: 'Video Ads' }
-          ],
+          data: [],
           emphasis: {
             itemStyle: {
               shadowBlur: 10,
@@ -6789,8 +6875,15 @@ nextTick(() => {
         }
       ]
     };
+
     for (let [key, value] of Object.entries(statusOfAllExamples)) {
-      pieChartOption.series[0].data.push({value: value, name: key})
+      pieChartOption.series[0].data.push({
+        value: value,
+        name: key,
+        itemStyle: {
+          color: colorMap[key] || '#ccc' // 如果状态不在映射中，使用默认颜色
+        }
+      });
     }
     // console.log("pieChartOption.series[0].data: ", pieChartOption.series[0].data)
     pieChart.setOption(pieChartOption);
@@ -7246,6 +7339,8 @@ const displayFaultDiagnosis = ref(false)
 const generateFaultDiagnosisFigure = ref(false)
 const faultDiagnosis = ref('')
 const faultDiagnosisFigure = ref('')  // 原始信号波形图
+let faultDiagnosisAccuracy = 0  // 故障诊断准确度
+const faultDiagnosisConfusionMatrix = ref('')  // 故障诊断混淆矩阵
 const faultDiagnosisComplementaryFigure = ref('')  // 补充的故障诊断结果图
 const faultDiagnosisComplementarySummary = ref('')  // 补充的故障诊断结果总结
 const faultDiagnosisResultsText = ref('')
@@ -7253,6 +7348,17 @@ const faultDiagnosisResultOption = ref('2')
 const featuresStatisticsTableData = ref([])
 const dataToShowFeatureDiffBetweenFaultAndNoFault = ref({})
 
+watch((faultDiagnosisAccuracy) => {
+  
+})
+
+const accuracyAnalysisText = ref('当前运行数据集没有对应真实标签，无法进行模型准确率评估')
+// const accuracyAnalysisText = computed(() => {
+//   if (faultDiagnosisAccuracy != 0)
+//     return `该数据集下故障诊断精确度为:${faultDiagnosisAccuracy}%`
+//   else
+//     return '当前运行数据集没有对应真实标签，无法进行模型准确率评估'
+// })
 
 
 const canShowIndicator = ref(false)
@@ -7261,11 +7367,26 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
   // displayFaultDiagnosis.value = true
 
   let figure1 = resultsObject.figure_Base64
+  let cm_figure = resultsObject.cm_figure_Base64
   let diagnosisResult = resultsObject.diagnosis_result
   let indicator = resultsObject.indicator
   let x_axis = resultsObject.x_axis
   let num_has_fault = resultsObject.num_has_fault
   let num_has_no_fault = resultsObject.num_has_no_fault
+
+  if (resultsObject.accuracy != 0){
+    console.log("faultDiagnosisDisplay resultsObject.accuracy != 0")
+    faultDiagnosisAccuracy = resultsObject.accuracy
+    accuracyAnalysisText.value = `该数据集下故障诊断精确度为:${faultDiagnosisAccuracy}%`
+    faultDiagnosisConfusionMatrix.value = 'data:image/png;base64,' + cm_figure  // 混淆矩阵
+    resultsToGenerateConclusion['faultDiagnosis']['texts'].push(accuracyAnalysisText.value)
+    resultsToGenerateConclusion['faultDiagnosis']['imageBase64List'].push(cm_figure)
+  }else{
+    faultDiagnosisAccuracy = 0
+    faultDiagnosisConfusionMatrix.value = ''
+  }
+
+  
 
   let mean_value_of_each_feature = resultsObject.mean_value_of_each_feature
 
@@ -7456,8 +7577,11 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
     resultsToGenerateConclusion['faultDiagnosis']['texts'].push('由输入的振动信号，共截取到'+(num_has_fault+num_has_no_fault)+
     '个样本，根据故障诊断模型预测，其中'+num_has_fault+'个样本存在故障，已达到样本总数的70%，由此判断该部件存在故障')
   }
-  faultDiagnosisFigure.value = 'data:image/png;base64,' + figure1
+  faultDiagnosisFigure.value = 'data:image/png;base64,' + figure1   // 原始信号波形图
 
+  // 数据集有标签，测试模型的准确度，才有混淆矩阵，否则不显示混淆矩阵
+  console.log('resultsObject.accuracy: ', resultsObject.accuracy)
+  
 }
 
 
@@ -7848,7 +7972,7 @@ const outputConfig = () => {
   selectAllModuleToGenerateResult.value = false
 }
 
-
+// 模块名称中英文映射
 let mapping = {
   '层次分析模糊综合评估': 'healthEvaluation',
   '层次朴素贝叶斯评估': 'healthEvaluation',
@@ -7863,23 +7987,25 @@ let mapping = {
   '小波变换': 'wavelet'
 }
 
-
-// 生成总结报告pdf
-const generateConclusion = async() => {
+// 根据选中的模块生成结果报告
+const generateResult = async(moduleNameArray: Array<string>) => {
   // clearGenerateResult()
-  // 生成所选模块的结果报告
-  if(moduleResultToGenerateList.value.length === 0){
-    ElMessage({
-      message: '请选择生成报告中所包含的结果',
-      type: 'warning'
-    })
-    return
-  }
+  // // 生成所选模块的结果报告
+  // if(moduleResultToGenerateList.value.length === 0){
+  //   ElMessage({
+  //     message: '请选择生成报告中所包含的结果',
+  //     type: 'warning'
+  //   })
+  //   return
+  // }
   // 清空报告结果
   clearGenerateResult()
 
+  console.log("generateResult moduleNameArray: ", moduleNameArray)
+
   // 将中文的模块名转换为英文
-  resultsToGenerateConclusion.includedModules = moduleResultToGenerateList.value.map(item => mapping[item])
+  // resultsToGenerateConclusion.includedModules = moduleResultToGenerateList.value.map(item => mapping[item])
+  resultsToGenerateConclusion.includedModules = moduleNameArray.map(item => mapping[item])
   // console.log('resultsToGenerateOutput: ', resultsToGenerateConclusion)
   resultsViewClear()
   canShowResults.value = true
@@ -7887,7 +8013,7 @@ const generateConclusion = async() => {
 
   // await clearGenerateResult();
   // 生成选择的模块名对应的结果报告
-  moduleResultToGenerateList.value.forEach(moduleName => {
+  moduleNameArray.forEach(moduleName => {
     if (missionComplete.value){
       // console.log("moduleName: ", moduleName)
       
@@ -7908,6 +8034,23 @@ const generateConclusion = async() => {
   var outline = "时间："+ new Date().toLocaleString() + "<br/>" + "数据集："+ usingDatafile.value + "<br/>" + "模型名称："+ modelLoadedName.value + "<br/>" + "包含模块："+ contentJson.schedule.join(', ')
   // console.log('resultsToGenerateOutput: ', resultsToGenerateConclusion)
   resultsToGenerateConclusion.outline = outline
+}
+
+// 生成总结报告pdf并下载到本地
+const generateConclusion = async() => {
+  // 生成所选模块的结果报告
+  if(moduleResultToGenerateList.value.length === 0){
+    ElMessage({
+      message: '请选择生成报告中所包含的结果',
+      type: 'warning'
+    })
+    return
+  }
+  
+  await generateResult(moduleResultToGenerateList.value)
+
+  console.log("generateConclusion resultsToGenerateConclusion: ", resultsToGenerateConclusion)
+
   let formData = new FormData()
   setTimeout(()=>{
     formData.append('resultsToGenerateOutput', JSON.stringify(resultsToGenerateConclusion))
@@ -8660,6 +8803,41 @@ const updateButtonVisibility = () => {
     isShowButtonOfSidebar.value = isMouseOverSidebar.value || isMouseOverButton.value;
   }
 };
+
+const generateModelTestReportLoading = ref(false)
+
+// 生成模型测试报告
+const generateModelTestReport = async() => {
+  generateModelTestReportLoading.value = true
+  await generateResult(filteredModules.value)
+  let formData = new FormData();
+  // const resultsCopy = JSON.parse(JSON.stringify(resultsToGenerateConclusion));
+  console.log("generateModelTestReport resultsToGenerateConclusion: " , resultsToGenerateConclusion)
+  // console.log("generateModelTestReport resultsCopy", resultsCopy)
+  // console.log("generateModelTestReport JSON", JSON.stringify(resultsCopy))
+  formData.append('modelId', modelId)  // 模型的id
+  formData.append("fileName", usingDatafile.value)  // 使用的数据集
+
+  console.log("generateModelTestReport formData:", formData.get('resultsToGenerateOutput'))
+  setTimeout(() => {
+    formData.append('resultsToGenerateOutput', JSON.stringify(resultsToGenerateConclusion))
+    api.post('/user/generate_model_evaluation_report/', formData)
+      .then((response: any) => {
+        if (response.data.code == 200) {
+          ElMessage({
+            message: '生成成功',
+            type: 'success'
+          })
+        } else if (response.data.code == 400) {
+          ElMessage({
+            message: '生成失败: ' + response.data.message,
+          })
+        }
+        generateModelTestReportLoading.value = false
+      })
+  }, 500)
+  
+}
 </script>
 
 <style scoped>

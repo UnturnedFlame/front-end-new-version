@@ -44,133 +44,144 @@
       v-model="publishModelPanelVisible"
       :close-on-press-escape="false"
       :close-on-click-modal="false"
+      :width="1100"
     >
+
       <div
         style="padding: 5px; display: flex; justify-content: left; align-items: center"
       >
         <p style="font-size: 26px; font-weight: bold">模型管理</p>
       </div>
       <div style="height: 1px; background-color: #d3d3d3; margin: 10px 0"></div>
-      <el-table
-        :data="fetchedModelsInfo"
-        height="500"
-        stripe
-        border
-        style="width: 100%"
-        empty-text="暂无模型"
-      >
-        <el-table-column :width="100" property="author" label="模型作者" />
-        <el-table-column
-          :width="200"
-          property="model_name"
-          label="模型名称"
-          show-overflow-tooltip
-        />
-        <el-table-column property="description" label="模型描述" show-overflow-tooltip />
-        <el-table-column property="isPublish" label="是否发布" show-overflow-tooltip />
-
-        <el-table-column :width="350" label="操作">
-          <template #default="scope">
-            <div class="button-container">
-              <!-- 删除已保存的模型 -->
-              <el-popconfirm
-                title="确定要删除该模型吗？"
-                @confirm="deleteModelConfirm(scope.$index, scope.row)"
-              >
-                <template #reference>
-                  <el-button size="small" type="danger" style="width: 90px"
-                    >删除</el-button
-                  >
-                </template>
-
-                <template #actions="{ confirm, cancel }">
-                  <el-row>
-                    <el-col :span="12"
-                      ><el-button size="small" @click="cancel">取消</el-button></el-col
-                    >
-                    <el-col :span="12">
-                      <el-button type="primary" size="small" @click="confirm">
-                        确定
-                      </el-button>
-                    </el-col>
-                  </el-row>
-                </template>
-              </el-popconfirm>
-
-              <!-- 查看模型信息 -->
-              <el-popover placement="bottom" :width="500" trigger="focus">
-                <el-descriptions :title="modelName" :column="3" direction="vertical">
-                  <el-descriptions-item label="使用模块" :span="3">
-                    <el-tag size="small" v-for="algorithm in modelAlgorithms">{{
-                      algorithm
-                    }}</el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="算法参数" :span="3">
-                    <div v-for="item in modelParams">
-                      {{ item.模块名 }}: {{ item.算法 }}
-                    </div>
-                  </el-descriptions-item>
-                </el-descriptions>
-                <template #reference>
-                  <el-button
-                    size="small"
-                    type="info"
-                    style="width: 90px"
-                    @click="showModelInfo(scope.row)"
-                  >
-                    查看模型
-                  </el-button>
-                </template>
-              </el-popover>
-              <!-- 测试报告按钮 -->
-              <el-button
-                size="small"
-                type="warning"
-                style="width: 90px"
-                @click="openReportDialog(scope.row)"
-              >
-                测试报告
-              </el-button>
-              <!-- 发布模型 -->
-              <el-popconfirm
-                :title="
-                  scope.row.isPublish == '已发布'
-                    ? '是否取消发布该模型？'
-                    : '是否发布该模型？'
-                "
-                @confirm="publishModelConfirm(scope.$index, scope.row)"
-              >
-                <template #reference>
-                  <el-button
-                    size="small"
-                    :type="scope.row.isPublish == '未发布' ? 'success' : 'warning'"
-                    v-if="scope.row.isPublish === '未发布'"
-                    style="width: 90px"
-                    >{{
-                      scope.row.isPublish == "未发布" ? "申请发布" : "取消发布"
-                    }}</el-button
-                  >
-                </template>
-
-                <template #actions="{ confirm, cancel }">
-                  <el-row>
-                    <el-col :span="12"
-                      ><el-button size="small" @click="cancel">取消</el-button></el-col
-                    >
-                    <el-col :span="12">
-                      <el-button type="primary" size="small" @click="confirm">
-                        确定
-                      </el-button>
-                    </el-col>
-                  </el-row>
-                </template>
-              </el-popconfirm>
-
-              
-            </div>
+      <div style="display:flex; flex-direction: column; align-items: left;">
+       
+        <el-input v-model="modelNameSearch" style="width: 240px; margin-bottom: 10px" placeholder="输入模型名称" @input="handleSearch">
+          <template #prepend>
+            搜索
           </template>
-        </el-table-column>
-      </el-table>
+        </el-input>
+  
+        <el-table
+          :data="fetchedModelsInfo"
+          height="500"
+          stripe
+          border
+          style="width: 100%"
+          empty-text="暂无模型"
+        >
+          <el-table-column :width="100" property="author" label="模型作者" />
+          <el-table-column
+            :width="200"
+            property="model_name"
+            label="模型名称"
+            show-overflow-tooltip
+          />
+          <el-table-column property="description" label="模型描述" show-overflow-tooltip />
+          <el-table-column property="isPublish" label="是否发布" show-overflow-tooltip />
+
+          <el-table-column :width="420" label="操作">
+            <template #default="scope">
+              <div class="button-container">
+                <!-- 删除已保存的模型 -->
+                <el-popconfirm
+                  title="确定要删除该模型吗？"
+                  @confirm="deleteModelConfirm(scope.$index, scope.row)"
+                >
+                  <template #reference>
+                    <el-button size="small" type="danger" style="width: 90px"
+                      >删除</el-button
+                    >
+                  </template>
+
+                  <template #actions="{ confirm, cancel }">
+                    <el-row>
+                      <el-col :span="12"
+                        ><el-button size="small" @click="cancel">取消</el-button></el-col
+                      >
+                      <el-col :span="12">
+                        <el-button type="primary" size="small" @click="confirm">
+                          确定
+                        </el-button>
+                      </el-col>
+                    </el-row>
+                  </template>
+                </el-popconfirm>
+
+                <!-- 查看模型信息 -->
+                <el-popover placement="bottom" :width="500" trigger="focus">
+                  <el-descriptions :title="modelName" :column="3" direction="vertical">
+                    <el-descriptions-item label="使用模块" :span="3">
+                      <el-tag size="small" v-for="algorithm in modelAlgorithms">{{
+                        algorithm
+                      }}</el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="算法参数" :span="3">
+                      <div v-for="item in modelParams">
+                        {{ item.模块名 }}: {{ item.算法 }}
+                      </div>
+                    </el-descriptions-item>
+                  </el-descriptions>
+                  <template #reference>
+                    <el-button
+                      size="small"
+                      type="info"
+                      style="width: 90px"
+                      @click="showModelInfo(scope.row)"
+                    >
+                      查看模型
+                    </el-button>
+                  </template>
+                </el-popover>
+                <!-- 测试报告按钮 -->
+                <el-button
+                  size="small"
+                  type="warning"
+                  style="width: 90px"
+                  @click="openReportDialog(scope.row)"
+                >
+                  测试报告
+                </el-button>
+                
+                <!-- 发布模型 -->
+                <el-popconfirm
+                  :title="
+                    scope.row.isPublish == '已发布'
+                      ? '是否取消发布该模型？'
+                      : '是否发布该模型？'
+                  "
+                  @confirm="publishModelConfirm(scope.$index, scope.row)"
+                >
+                  <template #reference>
+                    <el-button
+                      size="small"
+                      :type="scope.row.isPublish == '未发布' ? 'success' : 'warning'"
+                      v-if="scope.row.isPublish === '未发布'"
+                      style="width: 90px"
+                      >{{
+                        scope.row.isPublish == "未发布" ? "申请发布" : "取消发布"
+                      }}</el-button
+                    >
+                  </template>
+
+                  <template #actions="{ confirm, cancel }">
+                    <el-row>
+                      <el-col :span="12"
+                        ><el-button size="small" @click="cancel">取消</el-button></el-col
+                      >
+                      <el-col :span="12">
+                        <el-button type="primary" size="small" @click="confirm">
+                          确定
+                        </el-button>
+                      </el-col>
+                    </el-row>
+                  </template>
+                </el-popconfirm> 
+                <el-button type="text" @click="exportModel(scope.row.id)">导出模型</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
 
     <!-- <el-dialog v-model="reportDialogVisible" title="上传测试报告" width="30%">
@@ -203,7 +214,7 @@
         <div v-else style="font-size: 20px; margin-bottom: 10px;">
           <span style="color: #ff0000;">未上传测试报告</span>
         </div>
-        <el-upload
+        <!-- <el-upload
           ref="upload"
           :auto-upload="false"
           :on-exceed="handleExceed"
@@ -215,7 +226,7 @@
           
           <el-button slot="trigger" type="primary">选择文件</el-button>
           <el-button type="success" @click="submitUpload">保存</el-button>
-        </el-upload>
+        </el-upload> -->
       </el-dialog>
 
     <!-- 以抽屉的形式打开开发者用户已发布的模型 -->
@@ -298,6 +309,7 @@ import type {
   UploadRawFile,
   UploadUserFile,
 } from "element-plus";
+import { pa } from "element-plus/es/locale/index.mjs";
 
 const publishModelPanelVisible = ref(false);
 // 从后端获取到的历史模型的信息
@@ -425,7 +437,11 @@ const fetchModelInfoFromDatabase = () => {
 
   // 向后端发送请求获取用户的历史模型
   api
-    .get("user/fetch_models/")
+    .get("user/fetch_models/", {
+      params: {
+        modelName: modelNameSearch.value,
+      },
+    })
     .then((response: any) => {
       if (response.data.code === 200) {
         // modelsDrawer.value = true;
@@ -612,6 +628,51 @@ const downloadReport = (modelId: number) => {
     });
 };
 
+const exportModel = (modelId: number) => {
+  api.get('export_model/', {
+    params: {
+      modelId: modelId,
+    },
+    responseType: 'blob', // 设置响应类型为blob，以便处理文件下载
+  })
+  .then((response: any) => {
+    if (response.status === 200) {
+      // 创建一个URL对象
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // 创建一个<a>元素
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `model_${modelId}_modules.zip`); // 设置下载的文件名
+      document.body.appendChild(link);
+      link.click();
+      // 清除URL对象
+      window.URL.revokeObjectURL(url);
+      ElMessage({
+        message: '导出成功',
+        type: 'success'
+      });
+    } else {
+      ElMessage({
+        message: '导出失败，' + response.data.message,
+        type: 'error'
+      });
+    }
+  })
+  .catch((error: any) => {
+    ElMessage({
+      message: '导出失败',
+      type: 'error'
+    });
+    console.error('导出模型时出错:', error);
+  });
+};
+
+
+const modelNameSearch = ref("");
+const handleSearch = () => {
+  fetchModelInfoFromDatabase();
+};
+
 // 已加载模型和已加载数据字体颜色更改
 // const getColor = (value: string) => {
 //   if (value == "无") {
@@ -645,7 +706,7 @@ const downloadReport = (modelId: number) => {
 
 .button-container {
   display: flex;
-  gap: 10px; /* 按钮之间的间距 */
+  gap: 5px; /* 按钮之间的间距 */
 }
 
 .button-container .el-button {
