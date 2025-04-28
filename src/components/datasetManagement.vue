@@ -15,7 +15,7 @@
     
   </div>
 
-  <el-dialog v-model="datasetManagementDialog" width="1000px" center top="5vh"> 
+  <el-dialog v-model="datasetManagementDialog" width="1200px" center top="5vh"> 
     <div style="display: flex; flex-direction: column">
       <h2
         style="margin-bottom: 25px; color: #253b45; text-align: left; font-size: 25px"
@@ -86,6 +86,23 @@
                 label="数据集名称"
                 show-overflow-tooltip
               />
+              <!-- <el-table-column
+                property="description"
+                label="数据集描述"
+                show-overflow-tooltip
+              /> -->
+              <el-table-column
+                property="data_pick_object"
+                label="数据采集对象"
+                show-overflow-tooltip
+              />
+
+              <el-table-column
+                property="signal_type"
+                label="数据类型"
+                show-overflow-tooltip
+              />
+             
               <el-table-column
                 property="description"
                 label="数据集描述"
@@ -96,7 +113,7 @@
                 label="文件类型"
                 show-overflow-tooltip
               />
-              <el-table-column label="操作">
+              <el-table-column label="操作" width="100">
                 <template #default="scope">
                   <el-popconfirm
                     title="你确定要删除该数据文件吗"
@@ -218,15 +235,48 @@
                     <div style="color: #999; font-size: 12px">(长度不超过500字符)</div>
                   </a-form-item>
 
-                  <a-form-item label="数据采集时间" 
-                                name="dataPickTime"
-                                :rules="[{ required: true, message: '请选择数据采集时间!' }]">
-                    <!-- <a-range-picker v-model:value="dataFileFormState.dataPickTime">
-          
-                    </a-range-picker> -->
-                    <a-range-picker v-model:value="dataFileFormState.dataPickTime" show-time />
+      
+                  <a-form-item 
+                    label="信号类型"
+                    name="signalType"
+                    :rules="[{ required: true, message: '请选择信号类型!' }]"
+                  >
+                    <a-radio-group v-model:value="dataFileFormState.signalType">
+                      <a-radio :value="0">振动信号</a-radio>
+                      <a-radio :value="1">声信号</a-radio>
+                      <a-radio :value="2">电信号</a-radio>
+                    </a-radio-group>
                   </a-form-item>
 
+
+                  <a-form-item
+                    label="传感器"
+                    name="sensor"
+                    :rules="[{ required: true, message: '请填写传感器!' },
+                    { min: 1, max: 200, message: '长度应在1到200个字符之间!', trigger: 'blur' }]"
+                  >
+                    <a-input v-model:value="dataFileFormState.sensor" placeholder="请填写传感器"></a-input>
+                  </a-form-item>
+
+                  <a-form-item
+                    label="数据采样频率"
+                    name="sampleRate"
+                    :rules="[{ required: true, message: '请填写数据采样频率!' }]"
+                  >
+                    <a-input-number 
+                      v-model:value="dataFileFormState.sampleRate" 
+                      placeholder="请填写数据采样频率"
+                      addon-after="Hz"
+                    ></a-input-number>
+                  </a-form-item>
+
+                  <a-form-item 
+                    label="数据采集时间" 
+                    name="dataPickTime"
+                    :rules="[{ required: true, message: '请选择数据采集时间!' }]"
+                  >
+                    <a-range-picker v-model:value="dataFileFormState.dataPickTime" show-time />
+                  </a-form-item>
                   
                   <a-form-item label="选择数据类型">
                     <a-radio-group v-model:value="dataFileFormState.multipleSensors">
@@ -390,6 +440,18 @@
                 label="数据集名称"
                 show-overflow-tooltip
               />
+              <el-table-column
+                property="data_pick_object"
+                label="数据采集对象"
+                show-overflow-tooltip
+              />
+
+              <el-table-column
+                property="signal_type"
+                label="数据类型"
+                show-overflow-tooltip
+              />
+             
               <el-table-column
                 property="description"
                 label="数据集描述"
@@ -811,6 +873,10 @@ const dataFileFormState = ref({
   isPublic: "private",
   dataPickTime: [null, null] as [Dayjs | null, Dayjs | null],
   dataPickObject: "",
+  signalType: 0,
+  sensor: "",
+  sampleRate: 0,
+
 });
 
 const saveSelectedAttributeFileRules: Record<string, Rule[]> = {
@@ -1072,11 +1138,15 @@ const onFinish = () => {
   formData.append("multipleSensors", dataFileFormState.value.multipleSensors);
   formData.append("isPublic", dataFileFormState.value.isPublic);
   formData.append("dataPickObject", dataFileFormState.value.dataPickObject)
+  formData.append("signalType", dataFileFormState.value.signalType.toString())
+  formData.append("sensor", dataFileFormState.value.sensor)
+  formData.append("sampleRate", dataFileFormState.value.sampleRate.toString())
+  
   // 使用 format 方法格式化日期为本地时间
   formData.append("dataPickTimeStart", dataFileFormState.value.dataPickTime[0]?.format('YYYY-MM-DDTHH:mm:ss') || '');
   formData.append("dataPickTimeEnd", dataFileFormState.value.dataPickTime[1]?.format('YYYY-MM-DDTHH:mm:ss') || '');
 
-  console.log(dataFileFormState.value.dataPickTime[0]?.toISOString());
+  // console.log(dataFileFormState.value.dataPickTime[0]?.toISOString());
   uploading.value = true;
 
   api
@@ -1084,6 +1154,7 @@ const onFinish = () => {
     .then((response: any) => {
       if (response.data.message == "save data success") {
         fileList.value = [];
+        fileList2.value = [];
         uploading.value = false;
         ElMessage({
           message: "数据文件上传成功",

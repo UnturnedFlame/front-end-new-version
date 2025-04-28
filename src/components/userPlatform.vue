@@ -1469,7 +1469,7 @@
                           </a-modal>
                         </div>
 
-                        <div  v-show="showResultSs==='连续样本指标变换'">
+                        <div  v-if="enableFeaturesContrast === 1" v-show="showResultSs==='连续样本指标变换'">
                           <div id="indicatorVaryingFigure" style="width: 1200px; height: 500px; margin-bottom: 30px"></div>
         
                           <faultDiagnosisComplementaryFigureOne :data="dataToShowFeatureDiffBetweenFaultAndNoFault"/>
@@ -1726,6 +1726,7 @@
                         <el-button
                           style="width: 180px; font-size: 16px; margin-top: 20px"
                           type="primary"
+                          :loading="generateConclusionLoading"
                           @click="generateConclusion"
                         >
                           输出报告并下载
@@ -6635,7 +6636,8 @@ const saveModelConfirm = async (formEl: FormInstance | undefined) => {
           superComponentTree.value.getComponentTrees()
           superComponentTree.value.fetchModelInfoFromDatabase()
           getComponentTrees();
-
+          
+          modelHasBeenSaved = true
           modelId = response.data.model_id
           console.log('saveModelConfirm modelId: ', modelId);
           modelsDrawer.value = true       // 关闭历史模型抽屉
@@ -6687,6 +6689,7 @@ const statusOfExamples = ref({});
 const suggestionOfAllExamples = ref({});
 const finalSuggestion = ref('');
 const statusProbability = ref([]);
+
 // const healthEvaluationFigure1 = ref('data:image/png;base64,')
 // const healthEvaluationFigure2 = ref('data:image/png;base64,')
 // const healthEvaluationFigure3 = ref('data:image/png;base64,')
@@ -7347,10 +7350,11 @@ const faultDiagnosisResultsText = ref('')
 const faultDiagnosisResultOption = ref('2')
 const featuresStatisticsTableData = ref([])
 const dataToShowFeatureDiffBetweenFaultAndNoFault = ref({})
+const enableFeaturesContrast = ref(0)  // 根据故障诊断是否为机器学习的算法判断是否需要展示样本特征
 
-watch((faultDiagnosisAccuracy) => {
+// watch((faultDiagnosisAccuracy) => {
   
-})
+// })
 
 const accuracyAnalysisText = ref('当前运行数据集没有对应真实标签，无法进行模型准确率评估')
 // const accuracyAnalysisText = computed(() => {
@@ -7374,19 +7378,23 @@ const faultDiagnosisDisplay = (resultsObject: any) => {
   let num_has_fault = resultsObject.num_has_fault
   let num_has_no_fault = resultsObject.num_has_no_fault
 
+
   if (resultsObject.accuracy != 0){
     console.log("faultDiagnosisDisplay resultsObject.accuracy != 0")
     faultDiagnosisAccuracy = resultsObject.accuracy
-    accuracyAnalysisText.value = `该数据集下故障诊断精确度为:${faultDiagnosisAccuracy}%`
+    let f1Score = resultsObject.f1_score
+    let recall = resultsObject.recall
+    accuracyAnalysisText.value = `该数据集下故障诊断精确度为:${faultDiagnosisAccuracy}%， f1分数为: ${f1Score}， 召回率为: ${recall}`
     faultDiagnosisConfusionMatrix.value = 'data:image/png;base64,' + cm_figure  // 混淆矩阵
     resultsToGenerateConclusion['faultDiagnosis']['texts'].push(accuracyAnalysisText.value)
     resultsToGenerateConclusion['faultDiagnosis']['imageBase64List'].push(cm_figure)
   }else{
+    accuracyAnalysisText.value = '当前运行数据集没有对应真实标签，无法进行模型准确率评估'
     faultDiagnosisAccuracy = 0
     faultDiagnosisConfusionMatrix.value = ''
   }
 
-  
+  enableFeaturesContrast.value = resultsObject.enable_features_contrast
 
   let mean_value_of_each_feature = resultsObject.mean_value_of_each_feature
 
@@ -8030,14 +8038,24 @@ const generateResult = async(moduleNameArray: Array<string>) => {
     }
   })
 
-  console.log("generateConclusion resultsToGenerateConclusion: ", resultsToGenerateConclusion)
-  var outline = "时间："+ new Date().toLocaleString() + "<br/>" + "数据集："+ usingDatafile.value + "<br/>" + "模型名称："+ modelLoadedName.value + "<br/>" + "包含模块："+ contentJson.schedule.join(', ')
+  let modelName
+  if(modelLoadedName.value == undefined || modelLoadedName.value == ""){
+    modelName = "未命名模型"
+  }else{
+    modelName = modelLoadedName.value
+  }
+
+  // console.log("generateConclusion resultsToGenerateConclusion: ", resultsToGenerateConclusion)
+  let outline = "时间："+ new Date().toLocaleString() + "<br/>" + "数据集："+ usingDatafile.value + "<br/>" + "模型名称："+ modelName + "<br/>" + "包含模块："+ contentJson.schedule.join(', ')
   // console.log('resultsToGenerateOutput: ', resultsToGenerateConclusion)
   resultsToGenerateConclusion.outline = outline
 }
 
+
+const generateConclusionLoading = ref(false)
 // 生成总结报告pdf并下载到本地
 const generateConclusion = async() => {
+  generateConclusionLoading.value = true
   // 生成所选模块的结果报告
   if(moduleResultToGenerateList.value.length === 0){
     ElMessage({
@@ -8048,28 +8066,38 @@ const generateConclusion = async() => {
   }
   
   await generateResult(moduleResultToGenerateList.value)
+  
+  let formData = new FormData()
+  if (modelHasBeenSaved){
+    formData.append('modelId', modelId)  // 模型的id
+  }else{
+    formData.append('schedule', contentJson.schedule)
+  }
+  formData.append("fileName", usingDatafile.value)  // 使用的数据集
+  formData.append("downLoad", 1)
 
   console.log("generateConclusion resultsToGenerateConclusion: ", resultsToGenerateConclusion)
 
-  let formData = new FormData()
   setTimeout(()=>{
     formData.append('resultsToGenerateOutput', JSON.stringify(resultsToGenerateConclusion))
-    api.post('user/generate_conclusion/', formData, { responseType: 'blob' }).then((response: any) => {
-    if (response.status === 200) {
-      ElMessage({
-        message: '生成总结报告成功',
-        type: 'success',
-      });
-      downloadFile(response.data, 'report.pdf');
-      // let conclusion = response.data.data
-    }else {
-      ElMessage({
-        message: '生成总结报告失败, '+response.data.message,
-        type: 'error',
-      });
-    }
+    api.post('user/generate_model_evaluation_report/', formData, { responseType: 'blob' }).then((response: any) => {
+      generateConclusionLoading.value = false
+      if (response.status === 200) {
+        ElMessage({
+          message: '生成总结报告成功',
+          type: 'success',
+        });
+        downloadFile(response.data, 'report.pdf');
+        // let conclusion = response.data.data
+      }else {
+        ElMessage({
+          message: '生成总结报告失败, '+response.data.message,
+          type: 'error',
+        });
+      }
   })
   .catch((error: any) => {
+    generateConclusionLoading.value = false
     console.log('生成总结报告失败：', error)
   })
   }, 500)
@@ -8789,6 +8817,7 @@ const getColor = (value: string) => {
 // 控制左侧边栏菜单的收纳
 const isMenuVisible = ref(true)
 const toggleMenu = () => {
+  // console.log('toggleMenu')
   isMenuVisible.value = !isMenuVisible.value
 }
 const isShowButtonOfSidebar = ref(false) //按钮显示状态
@@ -8817,6 +8846,7 @@ const generateModelTestReport = async() => {
   // console.log("generateModelTestReport JSON", JSON.stringify(resultsCopy))
   formData.append('modelId', modelId)  // 模型的id
   formData.append("fileName", usingDatafile.value)  // 使用的数据集
+  formData.append('downLoad', 0)
 
   console.log("generateModelTestReport formData:", formData.get('resultsToGenerateOutput'))
   setTimeout(() => {
