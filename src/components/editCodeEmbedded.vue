@@ -38,7 +38,7 @@
               {{ module.label }}
             </a-select-option>
           </a-select-opt-group> -->
-          <a-select-opt-group v-if="!loadingUserAlgorithms">
+          <a-select-opt-group>
             <template #label>
               <span style="font-weight: bold; font-size: 16px">上传组件</span>
             </template>
@@ -50,11 +50,11 @@
               {{ module.label }}
             </a-select-option>
             <!-- 空状态提示 -->
-            <a-select-option v-if="userAlgorithms.length === 0" disabled>
+            <!-- <a-select-option v-if="userAlgorithms.length === 0" disabled>
               暂无上传组件
-            </a-select-option>
+            </a-select-option> -->
           </a-select-opt-group>
-          <a-spin v-else tip="加载用户组件中..." />
+          <!-- <a-spin v-else tip="加载用户组件中..." /> -->
         </a-select>
 
         <span style="margin-left: 50px">编辑代码</span>
@@ -154,8 +154,11 @@ export default {
     //     console.error("无法获取用户算法列表:", error);
     //   }
     // };
+   
 
-    const userAlgorithms = ref([]);
+
+    // let userAlgorithms = [];
+    const userAlgorithms = reactive([]);
     const loadingUserAlgorithms = ref(false);
 
     const fetchUserAlgorithms = async () => {
@@ -165,13 +168,19 @@ export default {
         if (response.data.code === 401) {
           handleUnauthorized();
         } else {
-          userAlgorithms.value = response.data.result.map((algorithm) => ({
+          // userAlgorithms = response.data.result.map((algorithm) => ({
+          //   label: algorithm.alias,
+          //   value: algorithm.alias,
+          //   source_code: algorithm.source_code,
+          // }));
+          userAlgorithms.splice(0, userAlgorithms.length, ...response.data.result.map((algorithm) => ({
             label: algorithm.alias,
             value: algorithm.alias,
             source_code: algorithm.source_code,
-          }));
+          })));
+          // userAlgorithms = response.data.result
 
-          console.log("fetchUserAlgorithms userAlgorithms: ", userAlgorithms.value);
+          console.log("fetchUserAlgorithms userAlgorithms: ", userAlgorithms);
         }
       } catch (error) {
         console.error("请求失败:", error);
@@ -180,6 +189,15 @@ export default {
         loadingUserAlgorithms.value = false;
       }
     };
+
+    const fetchedUserAlgorithms = computed(() => {
+      // return userAlgorithms;
+      return userAlgorithms.map((algorithm) => ({
+        label: algorithm.label,
+        value: algorithm.value,
+        source_code: algorithm.source_code,
+      }));
+    });
 
     // 统一处理未授权
     const handleUnauthorized = () => {

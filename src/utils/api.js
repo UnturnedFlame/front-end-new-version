@@ -2,7 +2,8 @@ import axios from 'axios'
 
 const api = axios.create({
     // baseURL: 'http://127.0.0.1:8000',
-    baseURL: 'http://f297z80366.wicp.vip:8000',
+    // baseURL: 'http://f297z80366.wicp.vip:8000',
+    baseURL: 'http://8.138.195.243:8000',
 });
 
 // 拦截器
